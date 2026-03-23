@@ -1,0 +1,27 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "lumina-neo",
+  "pages_build_output_dir": "public",
+  "compatibility_date": "2024-03-20",
+  "kv_namespaces": [
+    {
+      "binding": "KV_USERS",
+      "id": "4b8b4bc3a7e04729933c33ab2df01016"
+    },
+    {
+      "binding": "KV_PROFILES",
+      "id": "8ddd91937e024774969a1ab816ce3926"
+    },
+    {
+      "binding": "KV_LOCATIONS",
+      "id": "8ff2ffe50f47478994415b66945a9f8f"
+    },
+    {
+      "binding": "KV_POI",
+      "id": "9371be3728c04e5e92142daa97ca843d"
+    }
+  ],
+  "vars": {
+    "VERSION": "v1.0.1"
+  }
+}
