@@ -16,7 +16,5 @@ dist/
 Thumbs.db
 
 # Project-specific
-backend/node_modules/
-frontend/node_modules/
-backend/dist/
-frontend/dist/
+public/dist/
+functions/dist/

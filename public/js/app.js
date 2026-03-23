@@ -1,6 +1,6 @@
 /**
  * Lumina Neo Frontend
- * Version: v1.0.0
+ * Version: v1.0.1
  * SPA application bootstrapping and navigation
  */
 import { renderHome } from './ui-home.js';

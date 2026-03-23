@@ -1,5 +1,18 @@
 {
   "name": "lumina-neo",
-  "version": "1.0.0",
-  "private": true
+  "version": "1.0.1",
+  "private": true,
+  "description": "Lumina Neo - Unified Cloudflare Pages Project",
+  "main": "functions/api/[[path]].ts",
+  "scripts": {
+    "deploy": "wrangler pages deploy public",
+    "dev": "wrangler pages dev public",
+    "start": "wrangler pages dev public",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20240320.0",
+    "typescript": "^5.0.0",
+    "wrangler": "^3.0.0"
+  }
 }

@@ -1,4 +1,4 @@
-const API_BASE_URL = 'https://api.lumina-neo.peakits.com/api';
+const API_BASE_URL = '/api';
 
 export async function fetchApi(endpoint, method = 'GET', body = null, headers = {}) {
     const url = `${API_BASE_URL}${endpoint}`;
