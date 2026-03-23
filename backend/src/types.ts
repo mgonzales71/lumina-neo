@@ -194,7 +194,7 @@ export interface ProviderUserSettings {
 }
 
 export interface ProviderSettingsRoot {
-  activeProvider: string;
+  activeProvider: string;  // "pollinations", "openrouter", etc.
   providers: Record<string, ProviderUserSettings>;
 }
 

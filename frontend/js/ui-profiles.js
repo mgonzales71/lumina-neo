@@ -28,7 +28,7 @@ export function renderProfiles() {
         
         <div class="card">
             <h3>Account</h3>
-            <p>Logged in as: <strong>${AppState.userId}</strong></p>
+            <p>Logged in as:: <strong>${AppState.userId}</strong></p>
             <button id="logout-btn" class="btn btn-secondary">Logout</button>
         </div>
     `;
