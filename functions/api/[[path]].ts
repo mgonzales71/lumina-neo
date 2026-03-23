@@ -127,7 +127,7 @@ export const onRequest: PagesFunction<Env> = async (context) => {
   }
 };
 
-// --- Route Handlers ---
+// --- Route Handlers (Mostly unchanged, using Env from context) ---
 
 async function handleLogin(request: Request, env: Env): Promise<Response> {
   const body = await request.json() as any;

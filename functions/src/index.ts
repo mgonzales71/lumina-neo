@@ -1,3 +1,8 @@
+/**
+ * Lumina Neo Backend
+ * Version: v1.0.1
+ * Cloudflare Worker for API services
+ */
 import { Env, ApiResponse, UserRecord, ProfileSettings, LocationEntry, POIEntry, PromptVariables } from './types';
 import { PROVIDER_REGISTRY } from './providers';
 import { renderPrompt, reverseGeocode, getWeather, resolveTheme } from './utils';
@@ -5,7 +10,7 @@ import { generateImagePipeline } from './pipeline';
 
 // CORS Headers
 const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Origin': '*', // Adjust in production
   'Access-Control-Allow-Methods': 'GET, POST, PUT, OPTIONS',
   'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-User-Id, X-Passkey, X-Profile-Id',
 };

@@ -16,7 +16,7 @@ export const PROVIDER_REGISTRY: ProviderRegistry = {
         enabled: true,
         generate: {
           method: 'GET',
-          urlTemplate: 'https://image.pollinations.ai/prompt/{prompt}?width={width}&height={height}&model={model}&seed={seed}&nologo=true',
+          urlTemplate: 'https://image.pollinations.ai/prompt/{prompt}?width={width}&height={height}&model=${model}&seed=${seed}&nologo=true',
           promptLocation: 'query'
         },
         fields: [
