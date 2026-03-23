@@ -1,0 +1,22 @@
+# Node.js
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.npm
+.env
+
+# Cloudflare Wrangler
+.wrangler/
+dist/
+.dev.vars
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Project-specific
+backend/node_modules/
+frontend/node_modules/
+backend/dist/
+frontend/dist/
