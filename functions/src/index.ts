@@ -1,6 +1,6 @@
 /**
  * Lumina Neo Backend
- * Version: v1.0.1
+ * Version: v1.0.2
  * Cloudflare Worker for API services
  */
 import { Env, ApiResponse, UserRecord, ProfileSettings, LocationEntry, POIEntry, PromptVariables } from './types';

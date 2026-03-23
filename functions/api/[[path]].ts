@@ -1,6 +1,6 @@
 /**
  * Lumina Neo Pages Functions API Entry Point
- * Version: v1.0.1
+ * Version: v1.0.2
  */
 import { Env, ApiResponse, UserRecord, ProfileSettings, LocationEntry, POIEntry, PromptVariables } from '../src/types';
 import { PROVIDER_REGISTRY } from '../src/providers';
