@@ -1,0 +1,559 @@
+Gemini
+You are an expert full‑stack web developer. Your task is to design and implement a web application using:
+	•	Frontend: plain HTML, CSS, and vanilla JavaScript (no frontend framework).
+	•	Hosting: Cloudflare Pages for the static frontend.
+	•	Backend: Cloudflare Workers for APIs.
+	•	Storage: Cloudflare Workers KV (namespaces for users, profiles, POIs, etc.), used as a global, low‑latency configuration and preferences store.developers.cloudflare+1
+The goal is: a configurable “dynamic wallpaper” / scene generator app that uses AI services to generate images based on the user’s location, time, weather, selected profile, and user‑defined data like themes, styles, prompts, and points of interest.
+We are calling it “lumina-neo”
+Local path /Users/mariogonzales/Documents/lumina-neo/lumina-neo
+GitHub repo https://github.com/mgonzales71/lumina-neo.git
+You should have access to GitHub and cloudflare wrangler cli tools
+
+
+Overall goals and constraints
+	1	Build a single‑page application UI with multiple tabs (HOME, Locations, POI, Themes, Styles, Prompts, Image Sizes, Providers, Profiles/Settings).
+	2	All configuration data (themes, styles, prompts, locations, POIs, image sizes, provider settings, profiles, users) must be modeled as JSON objects and persisted via Cloudflare KV.
+	3	The app must support multiple logical “users” identified by USERID and PASSKEY, with a reserved DEFAULT admin user that has an extra PIN for privileged actions.
+	4	For each user, support multiple named “profiles”. Each profile encapsulates all app settings (themes, styles, prompts, image sizes, provider settings, etc.). Profiles can be created, edited, imported, exported, switched, and synced to Cloudflare KV.
+	5	The app must integrate with AI providers (Pollinations, OpenRouter) through a provider registry abstraction. The frontend never sees provider API keys. Workers call providers on behalf of the user based on profile settings.
+	6	There must be a separate minimal API endpoint designed to be called from iOS Shortcuts, which takes USERID, PASSKEY, PROFILE, and lat/lon, returns JSON containing a generated image URL, POI name, and POI description.
+	7	Use Cloudflare Workers KV for user configuration and preferences as a distributed configuration store; reads should be fast and highly cacheable.developers.cloudflare+2
+
+High‑level architecture
+Implement:
+	•	Static frontend (Cloudflare Pages):
+	◦	index.html, css/main.css, and modular JS files (app.js, api.js, state.js, ui-*.js, util-*.js).
+	◦	The SPA manages navigation between tabs and interacts with the Workers API for data persistence and AI calls.
+	•	Cloudflare Workers backend:
+	◦	One Worker (or a small set of Workers) with routes like:
+	▪	POST /api/auth/login (validate USERID + PASSKEY, return short‑lived session token or just rely on repeated credentials).
+	▪	GET /api/profile and PUT /api/profile (load/save full profile JSON).
+	▪	POST /api/locations/sanitize (geocode and normalize user‑input location).
+	▪	POST /api/poi/populate (generate and cache POIs for a location).
+	▪	POST /api/generate-image (full pipeline used by the Home tab).
+	▪	POST /api/shortcuts/generate (Slimmed JSON output for iOS Shortcuts).
+	◦	Bind several KV namespaces (e.g., KV_USERS, KV_PROFILES, KV_POI, KV_LOCATIONS, optionally KV_SYSTEM).
+Cloudflare Workers KV is used for:
+	•	User records (hashed passkeys, admin flag, profile list).
+	•	Profile settings (themes, styles, prompts, image sizes, providerSettings, etc.).
+	•	Normalized locations.
+	•	Cached POIs per location.
+	•	Optionally logs or debugging artifacts.developers.cloudflare+2
+
+Data models (TypeScript‑style interfaces)
+Implement (or document) the following core data structures.
+Prompt variables
+Generated on the backend per request (not persisted long‑term):
+
+ts
+interface PromptVariables {
+  // Location
+  lat: number;
+  lon: number;
+  city: string;
+  state_region: string;
+  country: string;
+  geography_context: {
+    urbanicity: "urban" | "suburban" | "rural";
+    terrain: "mountains" | "flat";
+    coast: "coastal" | "inland";
+    near_water: boolean;
+  };
+
+  // Time
+  iso_datetime: string;    // e.g. 2026-03-23T10:15:00Z
+  date: string;            // DD-MM-YYYY
+  time: string;            // HH:MM with AM/PM or 24h
+  day_of_week: "Monday" | "Tuesday" | "Wednesday" | "Thursday" | "Friday" | "Saturday" | "Sunday";
+  is_weekend: boolean;
+  time_of_day_simple: "Daytime" | "Nighttime";
+  time_of_day_bucket:
+    | "blue_hour" | "golden_hour" | "dawn" | "morning"
+    | "noon" | "afternoon" | "sunset" | "late_night";
+
+  // Weather
+  weather: string;           // "Clear", "Overcast", "Light rain", etc.
+  precipitation_chance: number;
+  temperature_f: number;
+  wind_speed_mph: number;
+  visibility_mi: number;
+  cloud_cover_pct: number;
+  uv_index: number;
+  sun_strength: "low" | "medium" | "high";
+
+  // Sun / moon
+  sunrise: string;           // local HH:MM
+  sunset: string;
+  moon_phase: string;        // "waxing gibbous"
+  moon_illumination_pct: number;
+  moonrise: string;
+  moonset: string;
+
+  // Theme / profile
+  theme: string;
+  style: string;             // style ID, e.g. "hyper_photo_realistic"
+
+  // POI
+  poi_name: string;
+  poi_desc: string;
+}
+Theme data
+User‑editable themes with Begin/End encoded as MMDD integers:
+
+ts
+interface ThemeEntry {
+  Begin: number; // 505 => May 5
+  End: number;   // 505 => May 5
+  Theme: string; // "Cinco de Mayo"
+}
+Theme selection:
+	•	Compute mmdd = month * 100 + day.
+	•	For entries where Begin <= End, match if Begin <= mmdd <= End.
+	•	For wrapped ranges (Begin > End), match if mmdd >= Begin || mmdd <= End.
+	•	If multiple entries match, pick the narrowest range or the first by index.
+Style data
+User‑defined styles:
+
+ts
+interface StyleEntry {
+  style: string;       // e.g. "hyper_photo_realistic"
+  description: string; // human description
+}
+Locations
+Canonicalized locations after sanitization:
+
+ts
+interface LocationEntry {
+  id: string;       // slug, e.g. "portland-or-usa"
+  city: string;
+  state: string;
+  country: string;
+  lat: number;
+  lon: number;
+}
+Points of Interest (POI)
+POIs per location:
+
+ts
+interface POIEntry {
+  name: string;
+  description: string; // 1–2 concise, visual sentences
+}
+
+// KV stored as: key = "POI:{locationId}" => POIEntry[]
+Prompt templates
+Prompt templates with placeholders like {style}, {poi_name}, {time_of_day}, etc.:
+
+ts
+interface PromptTemplate {
+  id: string;      // "POI_DAYTIME", "POI_NIGHTTIME"
+  label: string;   // human label
+  template: string; // template string with {variables}
+  active: boolean;
+}
+Provide at least two defaults: one for daytime, one for nighttime, matching the user’s examples.
+Image sizes
+Predefined sizes plus a dynamic DEVICE preset:
+
+ts
+type ImageMode = "dynamic" | "preset";
+
+interface ImageSize {
+  label: string;
+  mode: ImageMode;  // "dynamic" for DEVICE, "preset" for others
+  width: number | null;
+  height: number | null;
+}
+
+interface ImageSizeConfig {
+  default: string;                // e.g. "DEVICE"
+  sizes: Record<string, ImageSize>;
+}
+DEVICE:
+	•	label: "This Device", mode: "dynamic", width: null, height: null.
+	•	At runtime, frontend sends actual width and height from the client.
+Provider registry and user settings
+Static provider registry (shipped with app; describes each provider):
+
+ts
+interface ProviderFieldDef {
+  key: string;
+  type: "text" | "number" | "boolean" | "select";
+  source?: "models";   // for model pickers
+  optional?: boolean;
+}
+
+interface ProviderGenerateDef {
+  method: "GET" | "POST";
+  urlTemplate?: string;          // for Pollinations GET
+  url?: string;                  // for POST endpoints
+  contentType?: string;          // "application/json"
+  promptLocation: "path" | "query" | "messages" | "body";
+}
+
+interface ProviderCategory {
+  enabled: boolean;
+  modelsUrl?: string;
+  multimodalModelsUrl?: string;
+  generate: ProviderGenerateDef;
+  fields: ProviderFieldDef[];
+}
+
+interface ProviderDefinition {
+  id: string;        // "pollinations" | "openrouter"
+  label: string;
+  docsUrl: string;
+  apiKeyUrl: string;
+  auth: {
+    type: "bearer";
+    headerName: string;
+    format: string;  // "Bearer {API_KEY}"
+  };
+  categories: {
+    image?: ProviderCategory;
+    text?: ProviderCategory;
+  };
+}
+
+type ProviderRegistry = Record<string, ProviderDefinition>;
+User‑specific provider settings:
+
+ts
+interface ProviderEndpointSettings {
+  selectedModel: string;
+  defaults: Record<string, string | number | boolean | null>;
+}
+
+interface ProviderUserSettings {
+  enabled: boolean;
+  apiKey: string;
+  image?: ProviderEndpointSettings;
+  text?: ProviderEndpointSettings;
+}
+
+interface ProviderSettingsRoot {
+  activeProvider: string;  // "pollinations", "openrouter", etc.
+  providers: Record<string, ProviderUserSettings>;
+}
+User and profile model
+User record:
+
+ts
+interface UserRecord {
+  userId: string;        // "DEFAULT", "USER1", etc.
+  passkeyHash: string;   // hashed + salted passkey
+  isAdmin: boolean;
+  profiles: string[];    // list of profile IDs
+  // Optionally: adminPinHash for DEFAULT
+}
+Profile settings:
+
+ts
+interface ProfileSettings {
+  id: string;
+  name: string;
+  email?: string;
+
+  // UI preferences
+  theme: "light" | "dark";
+  language: string;
+
+  // Prompt & visual configuration
+  activePromptDayId: string;    // "POI_DAYTIME"
+  activePromptNightId: string;  // "POI_NIGHTTIME"
+  activeStyleId: string;        // "hyper_photo_realistic"
+  activeImageSizeId: string;    // "DEVICE", "IPHONE_PRO", etc.
+
+  // Domain data
+  themes: ThemeEntry[];
+  styles: StyleEntry[];
+  locations: LocationEntry[];
+  prompts: Record<string, PromptTemplate>;
+  imageSizes: ImageSizeConfig;
+
+  // AI providers
+  providerSettings: ProviderSettingsRoot;
+}
+
+KV key layout
+Use multiple namespaces and keys:
+	•	KV_USERS:
+	◦	Key: USER:{userId} → UserRecord.
+	•	KV_PROFILES:
+	◦	Key: PROF:{userId}:{profileId} → ProfileSettings.
+	•	KV_LOCATIONS:
+	◦	Key: LOC:{locationId} → LocationEntry.
+	•	KV_POI:
+	◦	Key: POI:{locationId} → POIEntry[].
+Keep profile JSONs within KV size constraints and use POI keys per location to prevent oversized values.developers.cloudflare+3
+
+Backend behavior: key flows
+Implement these specific backend behaviors in Cloudflare Workers.
+1. Authentication
+	•	All sensitive endpoints accept userId, passkey, and optionally profileId.
+	•	Worker:
+	◦	Fetches USER:{userId} from KV_USERS.
+	◦	Hashes passkey and compares with passkeyHash.
+	◦	Verifies profileId is allowed for this user.
+	◦	For admin actions, verifies isAdmin and separate PIN if required.
+	•	Do not expose provider API keys to client; they live only in KV and inside the Worker.
+2. Location sanitization (POST /api/locations/sanitize)
+Input:
+
+json
+{ "city": "Portland", "state": "OR", "country": "US", "save": true }
+Behavior:
+	1	Build a geocoding query from the partial data.
+	2	Call a geocoding API (you choose provider) to get candidate locations.
+	3	Normalize (correct city name, full state, full country, lat/lon).
+	4	If multiple matches:
+	◦	Return { status: "multiple", candidates: LocationEntry[] }.
+	5	If single match:
+	◦	Return { status: "ok", location: LocationEntry }.
+	6	If save is true and match is final:
+	◦	Persist to KV_LOCATIONS under LOC:{locationId}.
+	◦	Optionally also update the profile’s locations list.
+The frontend shows choices when needed and saves final selection via another call.
+3. POI population (POST /api/poi/populate)
+Input:
+
+json
+{
+  "userId": "USER1",
+  "passkey": "user1-pass",
+  "profileId": "PROFILE1",
+  "locationId": "portland-or-usa",
+  "city": "Portland",
+  "state": "Oregon",
+  "country": "USA",
+  "maxItems": 30,
+  "refresh": false
+}
+Behavior:
+	1	Auth user.
+	2	If refresh === false, check KV for POI:{locationId}.
+	◦	If exists and non‑empty, return JSON with cached POIs.
+	3	If not found or refresh === true:
+	◦	Build strict JSON prompt instructing AI text provider to return a JSON array of {name, description} objects with no markdown or extra text.
+	◦	Call provider based on profile’s providerSettings (the text endpoint).
+	◦	Parse JSON, validate structure, clamp to maxItems.
+	◦	Store resulting array to KV_POI via POI:{locationId}.
+	◦	Return that array.
+4. Prompt rendering
+Implement a reusable function (can live in shared module used by Workers and/or frontend):
+
+ts
+function renderPrompt(template: string, vars: Record<string, string | number>): string {
+  return template.replace(/\{([a-zA-Z0-9_]+)\}/g, (_, key) => {
+    const v = vars[key];
+    return v !== undefined && v !== null ? String(v) : `{${key}}`;
+  });
+}
+Before calling this, map PromptVariables to a flat object with keys matching placeholders in templates.
+5. Main image generation API (POST /api/generate-image)
+Input from frontend:
+
+json
+{
+  "userId": "USER1",
+  "passkey": "user1-pass",
+  "profileId": "PROFILE1",
+  "lat": 45.52,
+  "lon": -122.67,
+  "deviceSize": { "width": 1179, "height": 2556 }
+}
+Worker pipeline:
+	1	Auth & profile:
+	◦	Validate user and load ProfileSettings.
+	2	Location:
+	◦	Use lat/lon to reverse‑geocode city/state/country.
+	◦	Derive locationId slug.
+	◦	Check if LOC:{locationId} exists; if not, create & save.
+	3	POI:
+	◦	Attempt to load POI:{locationId}.
+	◦	If empty, generate via POI population flow.
+	◦	Select a random POIEntry.
+	4	Weather & astronomy:
+	◦	Call chosen weather API with lat/lon.
+	◦	Derive:
+	▪	Current weather description.
+	▪	Precipitation chance.
+	▪	Temperature F.
+	▪	Wind speed.
+	▪	Visibility.
+	▪	Cloud cover.
+	▪	UV index.
+	▪	Sunrise and sunset times.
+	▪	Moon phase, illumination, moonrise, moonset.
+	◦	From this, compute:
+	▪	time_of_day_simple (Daytime vs Nighttime).
+	▪	time_of_day_bucket (based on local time vs sunrise/sunset).
+	▪	sun_strength from UV + cloud cover.
+	5	Theme and style:
+	◦	Using profile’s themes, compute today’s theme string.
+	◦	Take activeStyleId and map to style code.
+	6	Build PromptVariables using all resolved data.
+	7	Template selection:
+	◦	If time_of_day_simple === "Daytime", use activePromptDayId.
+	◦	Else use activePromptNightId.
+	◦	Get that PromptTemplate from profile.
+	8	Prompt rendering:
+	◦	Use renderPrompt to produce final prompt string.
+	9	Image size:
+	◦	Determine actual width/height:
+	▪	If activeImageSizeId === "DEVICE", use deviceSize.
+	▪	Else use preset from profile.imageSizes.sizes.
+	10	Provider selection and request build:
+	◦	Use profile.providerSettings.activeProvider.
+	◦	Read provider definition from static providerRegistry.
+	◦	Use providerSettings.providers[providerId].image to:
+	▪	Pick selectedModel.
+	▪	Override defaults (width, height, seed, flags).
+	◦	For Pollinations:
+	▪	Build GET https://image.pollinations.ai/prompt/{prompt} with query params model, width, height, seed, etc.
+	◦	For OpenRouter:
+	▪	Build POST https://openrouter.ai/api/v1/chat/completions with OpenAI‑style body and message content = final prompt; include requested width/height/quality if supported.
+	11	Call provider, obtain a usable image URL or data.
+	12	Response to frontend:
+Return JSON:
+
+json
+{
+  "imageUrl": "https://...",
+  "debug": {
+    "prompt": "final resolved prompt string",
+    "promptVariables": { /* prompt vars */ },
+    "provider": "pollinations",
+    "model": "flux",
+    "width": 1320,
+    "height": 2868
+  }
+}
+The frontend displays the image in the HOME tab placeholder and shows the debug info in an expandable “Details” panel.
+6. iOS Shortcuts endpoint (POST /api/shortcuts/generate)
+API designed for automation:
+Input:
+
+json
+{
+  "userId": "USER1",
+  "passkey": "user1-pass",
+  "profileId": "PROFILE1",
+  "lat": 45.52,
+  "lon": -122.67
+}
+Pipeline:
+	•	Reuse the same steps as generate-image (auth, profile, POI, weather, etc.).
+	•	Generate image via provider.
+	•	Respond with minimal JSON:
+
+json
+{
+  "imageUrl": "https://...",
+  "poi": {
+    "name": "Portland Japanese Garden",
+    "description": "A serene oasis within Washington Park..."
+  },
+  "meta": {
+    "city": "Portland",
+    "state_region": "Oregon",
+    "country": "USA",
+    "theme": "General",
+    "time_of_day": "Daytime",
+    "time_of_day_bucket": "afternoon",
+    "weather": "Overcast",
+    "temperature": "61°F"
+  }
+}
+iOS Shortcuts then downloads imageUrl and sets the wallpaper.
+
+Frontend: SPA structure and behavior
+Implement a small SPA with:
+	•	index.html:
+	◦	Root container.
+	◦	Simple navigation bar to switch tabs.
+	◦	Placeholder for the current tab content.
+	•	css/main.css:
+	◦	Responsive layout.
+	◦	Image placeholder with correct aspect ratio based on selected image size.
+	•	JavaScript modules:
+	◦	app.js:
+	▪	Bootstraps app.
+	▪	Manages active tab.
+	▪	Coordinates loading of initial user/profile and provider registry.
+	◦	state.js:
+	▪	Holds in‑memory AppState:      ts  interface AppState {
+	▪	  userId: string | null;
+	▪	  profileId: string | null;
+	▪	  currentProfile: ProfileSettings | null;
+	▪	  activeTab: string;
+	▪	  lastGenerated?: {
+	▪	    imageUrl?: string;
+	▪	    debug?: any;
+	▪	  };
+	▪	}
+	▪	     
+	▪	Functions: loadProfile, saveProfile, switchProfile, etc.
+	▪	Persists some state in localStorage for convenience, but treats KV as source of truth.
+	◦	api.js:
+	▪	Wrapper around fetch for all Worker endpoints.
+	▪	Handles JSON response envelopes {ok, data, error}.
+	◦	ui-home.js:
+	▪	Renders HOME tab.
+	▪	Shows image placeholder and “Generate Image” button.
+	▪	On click, grabs location via Geolocation API, calls /api/generate-image, updates image and debug panel.
+	◦	ui-locations.js:
+	▪	List, add, delete, import/export locations.
+	▪	On add: call /api/locations/sanitize, handle multiple candidates, then save final choice.
+	◦	ui-poi.js:
+	▪	For chosen location, shows list of POIs.
+	▪	Buttons: populate via AI, sanitize existing entries, edit/delete, import/export.
+	◦	ui-themes.js, ui-styles.js, ui-prompts.js, ui-image-sizes.js, ui-providers.js, ui-profiles.js:
+	▪	Each tab manages its respective data structure within currentProfile.
+	▪	Uses api.js to persist full profile via PUT /api/profile.
+The frontend never directly talks to AI providers or Cloudflare KV; everything goes through the Worker APIs.
+
+Error handling and debug UX
+	•	Workers should respond with a standard envelope:
+	◦	On success:      json  { "ok": true, "data": { ... } }
+	◦	     
+	◦	On error:      json  {
+	◦	  "ok": false,
+	◦	  "error": {
+	◦	    "code": "WEATHER_API_FAILED",
+	◦	    "message": "Could not fetch weather data",
+	◦	    "details": {}
+	◦	  }
+	◦	}
+	◦	     
+	•	The frontend:
+	◦	Shows friendly toast or banner messages for errors.
+	◦	In the HOME debug panel, always show:
+	▪	Final prompt string.
+	▪	Flattened list of prompt variables and values.
+	▪	Provider, model, dimensions.
+	▪	Any raw provider error messages (for power users).
+
+What I want you (Gemini) to do
+	1	Refine or extend this architecture as needed, but preserve the concepts and flows described.
+	2	Generate:
+	◦	Data model definitions (TypeScript types or JSDoc for strong typing).
+	◦	Cloudflare Workers routing code (one primary Worker with all endpoints).
+	◦	KV bindings configuration examples (Wrangler config).
+	◦	Frontend structure: index.html, base CSS, and JS modules with stubbed functions.
+	3	Implement the app incrementally:
+	◦	Start with data models and minimal Workers endpoints.
+	◦	Then basic SPA shell (tab navigation, state management).
+	◦	Then implement specific tabs and flows:
+	▪	Profiles and user auth.
+	▪	Locations and POIs.
+	▪	Themes, styles, prompts.
+	▪	Provider registry + settings UI.
+	▪	Home tab and generate-image call.
+	▪	iOS Shortcuts endpoint.
+	4	At each step:
+	◦	Explain decisions briefly.
+	◦	Provide runnable code snippets.
+	◦	Assume I will deploy to Cloudflare Pages + Workers; include any necessary wrangler.toml examples and KV namespace bindings.
+Use this prompt as your authoritative specification for the app’s behavior and structure.
