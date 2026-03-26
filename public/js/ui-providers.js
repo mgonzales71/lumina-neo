@@ -78,9 +78,13 @@ export async function renderProviders() {
                     </div>
 
                     ${account.username ? `
-                        <div class="provider-info" style="background: rgba(0,0,0,0.2); padding: 10px; border-radius: 4px; margin-bottom: 15px; font-size: 0.9rem;">
-                            <strong>Account:</strong> ${account.username} (${account.tier})<br>
-                            <strong>Balance:</strong> ${account.balance} Pollen
+                        <div class="provider-info" style="background: rgba(0,0,0,0.2); padding: 12px; border-radius: 8px; margin-bottom: 15px; font-size: 0.9rem; line-height: 1.7;">
+                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+                                <span><strong>${account.username}</strong> &nbsp;<span style="opacity:0.7; font-size:0.85em;">${account.tier}</span></span>
+                                <span style="font-weight:600; color:var(--primary-color);">${account.balance} Pollen</span>
+                            </div>
+                            ${account.email ? `<div style="opacity:0.7; font-size:0.85em;">${account.email}</div>` : ''}
+                            ${account.nextResetAt ? `<div style="opacity:0.6; font-size:0.8em;">Resets ${new Date(account.nextResetAt).toLocaleDateString(undefined, {month:'short', day:'numeric', year:'numeric'})}</div>` : ''}
                         </div>
                     ` : ''}
 
@@ -172,6 +176,7 @@ function bindDynamicListeners(settings) {
     document.querySelectorAll('.config-field').forEach(input => {
         input.addEventListener('change', (e) => {
             const { provider, category, key } = e.target.dataset;
+            if (!settings.providers[provider][category]) settings.providers[provider][category] = { selectedModel: '', defaults: {} };
             settings.providers[provider][category][key] = e.target.value;
         });
     });
@@ -179,6 +184,7 @@ function bindDynamicListeners(settings) {
     document.querySelectorAll('.config-default-field').forEach(input => {
         input.addEventListener('change', (e) => {
             const { provider, category, key } = e.target.dataset;
+            if (!settings.providers[provider][category]) settings.providers[provider][category] = { selectedModel: '', defaults: {} };
             if (!settings.providers[provider][category].defaults) settings.providers[provider][category].defaults = {};
             settings.providers[provider][category].defaults[key] = e.target.value;
         });

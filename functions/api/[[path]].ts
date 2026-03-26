@@ -547,10 +547,11 @@ async function handleGetProviderAccount(request: Request, env: Env): Promise<Res
             return jsonResponse({
                 ok: true,
                 data: {
-                    balance: balance.balance || 0,
-                    username: account.username || 'unknown',
-                    tier: account.tier || 'Seed',
-                    email: account.email
+                    balance: Math.round((balance.balance || 0) * 100) / 100,
+                    username: account.name || account.username || 'Unknown',
+                    tier: account.displayTier || account.tier || 'Seed',
+                    email: account.email || '',
+                    nextResetAt: account.nextResetAt || ''
                 }
             });
         } catch (err: any) {
