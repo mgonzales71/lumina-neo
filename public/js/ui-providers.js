@@ -2,6 +2,7 @@ import { AppState } from './state.js';
 import { fetchApi } from './api.js';
 
 let registry = null;
+let providerData = {}; // Cache for account and models
 
 export async function renderProviders() {
     const container = document.getElementById('providers-tab');
@@ -38,13 +39,28 @@ export async function renderProviders() {
         </div>
     `;
 
-    // Render configuration for each provider
-    Object.values(registry).forEach(def => {
-        // Ensure user settings object exists
+    for (const def of Object.values(registry)) {
         if (!settings.providers[def.id]) {
             settings.providers[def.id] = { enabled: false, apiKey: '', image: { selectedModel: '', defaults: {} }, text: { selectedModel: '', defaults: {} } };
         }
         const userConf = settings.providers[def.id];
+
+        // Fetch dynamic data if enabled and key exists
+        if (userConf.enabled && userConf.apiKey && def.id === 'pollinations' && !providerData[def.id]) {
+            try {
+                const [account, imageModels, textModels] = await Promise.all([
+                    fetchApi(`/providers/account?userId=${AppState.userId}&profileId=${profile.id}&providerId=${def.id}`),
+                    fetchApi(`/providers/models?providerId=${def.id}&category=image`),
+                    fetchApi(`/providers/models?providerId=${def.id}&category=text`)
+                ]);
+                providerData[def.id] = { account, imageModels, textModels };
+            } catch (err) {
+                console.error('Failed to fetch provider data:', err);
+            }
+        }
+
+        const data = providerData[def.id] || {};
+        const account = data.account || {};
 
         html += `
             <div class="card">
@@ -61,15 +77,22 @@ export async function renderProviders() {
                         <input type="password" class="provider-apikey" data-id="${def.id}" value="${userConf.apiKey || ''}" placeholder="${def.apiKeyUrl ? 'Get key at ' + def.apiKeyUrl : 'No key required'}">
                     </div>
 
+                    ${account.username ? `
+                        <div class="provider-info" style="background: rgba(0,0,0,0.2); padding: 10px; border-radius: 4px; margin-bottom: 15px; font-size: 0.9rem;">
+                            <strong>Account:</strong> ${account.username} (${account.tier})<br>
+                            <strong>Balance:</strong> ${account.balance} Pollen
+                        </div>
+                    ` : ''}
+
                     <!-- Image Settings -->
-                    ${def.categories.image ? renderCategoryConfig(def.id, 'image', def.categories.image, userConf.image) : ''}
+                    ${def.categories.image ? renderCategoryConfig(def.id, 'image', def.categories.image, userConf.image, data.imageModels) : ''}
                     
                     <!-- Text Settings -->
-                    ${def.categories.text ? renderCategoryConfig(def.id, 'text', def.categories.text, userConf.text) : ''}
+                    ${def.categories.text ? renderCategoryConfig(def.id, 'text', def.categories.text, userConf.text, data.textModels) : ''}
                 </div>
             </div>
         `;
-    });
+    }
 
     container.innerHTML = html;
 
@@ -94,14 +117,14 @@ export async function renderProviders() {
         input.addEventListener('change', (e) => {
             const id = e.target.dataset.id;
             settings.providers[id].apiKey = e.target.value;
+            delete providerData[id]; // Clear cache to refetch with new key
         });
     });
 
-    // Listeners for dynamic fields
     bindDynamicListeners(settings);
 }
 
-function renderCategoryConfig(providerId, categoryName, def, userConf) {
+function renderCategoryConfig(providerId, categoryName, def, userConf, dynamicModels) {
     if (!userConf) userConf = { selectedModel: '', defaults: {} };
 
     let html = `<h4>${categoryName.charAt(0).toUpperCase() + categoryName.slice(1)} Generation</h4>`;
@@ -110,10 +133,14 @@ function renderCategoryConfig(providerId, categoryName, def, userConf) {
     const modelField = def.fields.find(f => f.key === 'model');
     if (modelField) {
         html += `<div class="form-group"><label>Model</label>`;
-        if (modelField.type === 'select') {
+        
+        const modelsToRender = dynamicModels || (modelField.options ? modelField.options.map(o => ({ id: o, label: o })) : []);
+
+        if (modelsToRender.length > 0) {
             html += `<select class="config-field" data-provider="${providerId}" data-category="${categoryName}" data-key="selectedModel">`;
-            modelField.options.forEach(opt => {
-                html += `<option value="${opt}" ${userConf.selectedModel === opt ? 'selected' : ''}>${opt}</option>`;
+            modelsToRender.forEach(m => {
+                const label = m.paid ? `${m.label} *` : m.label;
+                html += `<option value="${m.id}" ${userConf.selectedModel === m.id ? 'selected' : ''}>${label}</option>`;
             });
             html += `</select>`;
         } else {
@@ -163,6 +190,7 @@ async function saveProfile(profile) {
         await fetchApi('/profile', 'PUT', { userId: AppState.userId, profile });
         AppState.setProfile(profile);
         alert('Provider settings saved!');
+        renderProviders(); // Re-render to fetch new data
     } catch (err) {
         alert('Failed to save: ' + err.message);
     }

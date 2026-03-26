@@ -1,11 +1,15 @@
 import { ProviderRegistry } from './types';
 
+/**
+ * Provider Registry
+ * Version: v1.1.1
+ */
 export const PROVIDER_REGISTRY: ProviderRegistry = {
   pollinations: {
     id: 'pollinations',
     label: 'Pollinations.ai',
     docsUrl: 'https://github.com/pollinations/pollinations',
-    apiKeyUrl: '',
+    apiKeyUrl: 'https://enter.pollinations.ai/',
     auth: {
       type: 'bearer',
       headerName: 'Authorization',
@@ -16,7 +20,7 @@ export const PROVIDER_REGISTRY: ProviderRegistry = {
         enabled: true,
         generate: {
           method: 'GET',
-          urlTemplate: 'https://image.pollinations.ai/prompt/${prompt}?width=${width}&height=${height}&model=${model}&seed=${seed}&nologo=true',
+          urlTemplate: 'https://gen.pollinations.ai/image/${prompt}?width=${width}&height=${height}&model=${model}&seed=${seed}&nologo=true',
           promptLocation: 'query'
         },
         fields: [
@@ -33,7 +37,7 @@ export const PROVIDER_REGISTRY: ProviderRegistry = {
           promptLocation: 'body'
         },
         fields: [
-            { key: 'model', type: 'select', options: ['openai', 'mistral', 'karma', 'unity', 'midijourney', 'rtist'], optional: false }
+            { key: 'model', type: 'select', options: ['openai', 'mistral', 'searchgpt', 'gemini', 'deepseek'], optional: false }
         ]
       }
     }

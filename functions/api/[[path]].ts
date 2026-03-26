@@ -1,6 +1,6 @@
 /**
  * Lumina Neo Pages Functions API Entry Point
- * Version: v1.0.2
+ * Version: v1.1.1
  */
 import { Env, ApiResponse, UserRecord, ProfileSettings, LocationEntry, POIEntry, PromptVariables } from '../src/types';
 import { PROVIDER_REGISTRY } from '../src/providers';
@@ -101,12 +101,17 @@ export const onRequest: PagesFunction<Env> = async (context) => {
 
   // Router
   try {
-    // Note: In Pages Functions, url.pathname includes /api/...
     if (url.pathname === '/api/auth/login' && method === 'POST') {
       return await handleLogin(request, env);
     }
     if (url.pathname === '/api/providers/registry' && method === 'GET') {
         return jsonResponse({ ok: true, data: PROVIDER_REGISTRY });
+    }
+    if (url.pathname === '/api/providers/account' && method === 'GET') {
+        return await handleGetProviderAccount(request, env);
+    }
+    if (url.pathname === '/api/providers/models' && method === 'GET') {
+        return await handleGetProviderModels(request, env);
     }
     if (url.pathname === '/api/profile' && method === 'GET') {
       return await handleGetProfile(request, env);
@@ -136,8 +141,6 @@ export const onRequest: PagesFunction<Env> = async (context) => {
     return errorResponse('INTERNAL_ERROR', err.message || 'Unknown error', { stack: err.stack }, 500);
   }
 };
-
-// --- Route Handlers (Mostly unchanged, using Env from context) ---
 
 async function handleLogin(request: Request, env: Env): Promise<Response> {
   const body = await request.json() as any;
@@ -251,7 +254,6 @@ async function handlePopulatePOI(request: Request, env: Env): Promise<Response> 
         }
     }
 
-    // Load Profile for Provider Settings
     const profKey = `PROF:${userId}:${profileId}`;
     const profile = await env.KV_PROFILES.get<ProfileSettings>(profKey, 'json');
     if (!profile) return errorResponse('NOT_FOUND', 'Profile not found');
@@ -287,9 +289,7 @@ async function handlePopulatePOI(request: Request, env: Env): Promise<Response> 
         const result = await response.json() as any;
         let pois: POIEntry[] = [];
         
-        // Parse OpenAI-style response
         const content = result.choices?.[0]?.message?.content || '[]';
-        // Clean up potential markdown code blocks
         const cleaned = content.replace(/```json/g, '').replace(/```/g, '').trim();
         pois = JSON.parse(cleaned);
 
@@ -385,4 +385,87 @@ async function handleShortcutsGenerate(request: Request, env: Env): Promise<Resp
     } catch (err: any) {
         return errorResponse('GENERATION_FAILED', err.message);
     }
+}
+
+async function handleGetProviderAccount(request: Request, env: Env): Promise<Response> {
+    const url = new URL(request.url);
+    const userId = url.searchParams.get('userId');
+    const profileId = url.searchParams.get('profileId');
+    const providerId = url.searchParams.get('providerId');
+
+    if (!userId || !profileId || !providerId) return errorResponse('INVALID_INPUT', 'Missing params');
+
+    const profKey = `PROF:${userId}:${profileId}`;
+    const profile = await env.KV_PROFILES.get<ProfileSettings>(profKey, 'json');
+    if (!profile) return errorResponse('NOT_FOUND', 'Profile not found');
+
+    const providerCfg = profile.providerSettings.providers[providerId];
+    if (!providerCfg || !providerCfg.apiKey) return errorResponse('CONFIG_ERROR', 'API Key not found');
+
+    if (providerId === 'pollinations') {
+        try {
+            const [balanceRes, profileRes] = await Promise.all([
+                fetch('https://gen.pollinations.ai/account/balance', {
+                    headers: { 'Authorization': `Bearer ${providerCfg.apiKey}` }
+                }),
+                fetch('https://gen.pollinations.ai/account/profile', {
+                    headers: { 'Authorization': `Bearer ${providerCfg.apiKey}` }
+                })
+            ]);
+
+            const balance = await balanceRes.json() as any;
+            const account = await profileRes.json() as any;
+
+            return jsonResponse({
+                ok: true,
+                data: {
+                    balance: balance.balance || 0,
+                    username: account.username || 'unknown',
+                    tier: account.tier || 'Seed',
+                    email: account.email
+                }
+            });
+        } catch (err: any) {
+            return errorResponse('PROVIDER_ERROR', err.message);
+        }
+    }
+
+    return errorResponse('NOT_SUPPORTED', 'Account info not supported for this provider');
+}
+
+async function handleGetProviderModels(request: Request, env: Env): Promise<Response> {
+    const url = new URL(request.url);
+    const providerId = url.searchParams.get('providerId');
+    const category = url.searchParams.get('category') || 'image'; // image or text
+
+    if (providerId === 'pollinations') {
+        try {
+            const endpoint = category === 'image' 
+                ? 'https://gen.pollinations.ai/image/models' 
+                : 'https://gen.pollinations.ai/v1/models';
+            
+            const res = await fetch(endpoint);
+            const data = await res.json() as any;
+
+            let models = [];
+            if (category === 'image') {
+                models = Array.isArray(data) ? data.map(m => {
+                    const id = typeof m === 'string' ? m : m.id;
+                    return { id, label: id, paid: m.paid_only || false };
+                }) : [];
+            } else {
+                models = (data.data || []).map((m: any) => ({
+                    id: m.id,
+                    label: m.id,
+                    paid: m.paid_only || false
+                }));
+            }
+
+            return jsonResponse({ ok: true, data: models });
+        } catch (err: any) {
+            return errorResponse('PROVIDER_ERROR', err.message);
+        }
+    }
+
+    return errorResponse('NOT_SUPPORTED', 'Model discovery not supported for this provider');
 }
