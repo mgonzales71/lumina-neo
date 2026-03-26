@@ -412,7 +412,11 @@ async function handlePopulatePOI(request: Request, env: Env): Promise<Response> 
         let pois: POIEntry[] = [];
         
         const content = result.choices?.[0]?.message?.content || '[]';
-        const cleaned = content.replace(/```json/g, '').replace(/```/g, '').trim();
+        const cleaned = content
+            .replace(/```json/g, '').replace(/```/g, '').trim()
+            // Remove control characters that break JSON.parse (newlines/tabs inside string values)
+            .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '')
+            .replace(/\n/g, ' ').replace(/\r/g, '').replace(/\t/g, ' ');
         pois = JSON.parse(cleaned);
 
         if (Array.isArray(pois) && pois.length > 0) {
