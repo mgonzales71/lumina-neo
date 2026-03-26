@@ -362,12 +362,18 @@ async function handlePopulatePOI(request: Request, env: Env): Promise<Response> 
     }
 
     const key = `POI:${locationId}`;
-    
+
+    // Check cache before requiring city — cache hit needs no location name
     if (!refresh) {
         const cached = await env.KV_POI.get<POIEntry[]>(key, 'json');
         if (cached && cached.length > 0) {
             return jsonResponse({ ok: true, data: cached });
         }
+    }
+
+    // To generate POIs we need a city name
+    if (!city) {
+        return errorResponse('INVALID_INPUT', 'City is required to generate POIs');
     }
 
     const profKey = `PROF:${userId}:${profileId}`;

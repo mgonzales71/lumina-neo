@@ -47,15 +47,17 @@ export function renderPOI() {
     container.innerHTML = html;
     
     // Initial Load
-    loadPOIs(selectedLocId);
+    const initialLoc = locations.find(l => l.id === selectedLocId);
+    loadPOIs(selectedLocId, false, initialLoc?.city || '', initialLoc?.state || '', initialLoc?.country || '');
 
     // Event Listeners
     const select = document.getElementById('poi-location-select');
     select.addEventListener('change', (e) => {
         const newId = e.target.value;
+        const newLoc = locations.find(l => l.id === newId);
         container.dataset.selectedLocId = newId;
-        document.getElementById('current-loc-name').textContent = locations.find(l => l.id === newId)?.city;
-        loadPOIs(newId);
+        document.getElementById('current-loc-name').textContent = newLoc?.city;
+        loadPOIs(newId, false, newLoc?.city || '', newLoc?.state || '', newLoc?.country || '');
     });
 
     document.getElementById('refresh-poi-btn').addEventListener('click', () => {
