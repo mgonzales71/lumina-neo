@@ -608,9 +608,9 @@ async function handleGetProviderModels(request: Request, env: Env): Promise<Resp
                 models = (data.data || [])
                     .filter((m: any) => m.output_modalities?.includes('text'))
                     .map((m: any) => ({
-                        id: m.id,
+                        id: m.name || m.id,
                         label: m.name || m.id,
-                        paid: m.paid_only || m.type === 'paid' || false
+                        paid: m.paid_only || false
                     }));
             }
 
