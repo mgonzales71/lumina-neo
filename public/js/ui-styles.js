@@ -146,6 +146,10 @@ export function renderStyles() {
                 throw new Error(`Invalid entry: ${JSON.stringify(s)}`);
             });
             profile.styles = normalized;
+            // If the current active style no longer exists, default to the first imported one
+            if (normalized.length > 0 && !normalized.find(s => s.style === profile.activeStyleId)) {
+                profile.activeStyleId = normalized[0].style;
+            }
             await saveProfile(profile);
             renderStyles();
             alert(`Imported ${normalized.length} styles successfully!`);
