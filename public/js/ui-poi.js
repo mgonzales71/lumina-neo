@@ -1,5 +1,6 @@
 import { AppState } from './state.js';
 import { fetchApi } from './api.js';
+import { exportData, importData } from './utils.js';
 
 export function renderPOI() {
     const container = document.getElementById('poi-tab');
@@ -11,10 +12,8 @@ export function renderPOI() {
         return;
     }
 
-    // Default to first location if not selected
     let selectedLocId = container.dataset.selectedLocId || locations[0].id;
 
-    // Check if selected location still exists
     if (!locations.find(l => l.id === selectedLocId)) {
         selectedLocId = locations[0].id;
     }
@@ -28,15 +27,19 @@ export function renderPOI() {
                     ${locations.map(loc => `<option value="${loc.id}" ${loc.id === selectedLocId ? 'selected' : ''}>${loc.city}, ${loc.country}</option>`).join('')}
                 </select>
             </div>
+            <div style="display:flex; gap:10px; margin-bottom: 20px;">
+                <button id="export-pois-btn" class="btn btn-secondary" style="flex:1;">Export POIs</button>
+                <button id="import-pois-btn" class="btn btn-secondary" style="flex:1;">Import POIs</button>
+            </div>
             <div style="display: flex; gap: 10px; margin-bottom: 1rem;">
                 <button id="refresh-poi-btn" class="btn">Regenerate via AI</button>
                 <button id="add-poi-btn" class="btn btn-secondary">Add Manually</button>
-                <button id="save-poi-btn" class="btn" style="background-color: #27ae60;">Save Changes</button>
+                <button id="save-poi-btn" class="btn" style="background-color: var(--primary-color);">Save Changes</button>
             </div>
         </div>
 
         <div class="card">
-            <h3>POIs for <span id="current-loc-name">${locations.find(l => l.id === selectedLocId)?.city}</span></h3>
+            <h3 id="current-loc-name-display">POIs for <span id="current-loc-name">${locations.find(l => l.id === selectedLocId)?.city}</span></h3>
             <div id="poi-list-container">Loading...</div>
         </div>
     `;
@@ -56,7 +59,11 @@ export function renderPOI() {
     });
 
     document.getElementById('refresh-poi-btn').addEventListener('click', () => {
-        loadPOIs(select.value, true);
+        const currentLocId = document.getElementById('poi-location-select').value;
+        const currentLoc = profile.locations.find(l => l.id === currentLocId);
+        if (!currentLoc) { alert('Please select a valid location.'); return; }
+
+        loadPOIs(currentLocId, true, currentLoc.city, currentLoc.state, currentLoc.country);
     });
 
     document.getElementById('add-poi-btn').addEventListener('click', () => {
@@ -64,23 +71,51 @@ export function renderPOI() {
     });
 
     document.getElementById('save-poi-btn').addEventListener('click', () => {
-        savePOIs(select.value);
+        const currentLocId = document.getElementById('poi-location-select').value;
+        savePOIs(currentLocId);
+    });
+
+    document.getElementById('export-pois-btn').addEventListener('click', () => {
+        const currentLocId = document.getElementById('poi-location-select').value;
+        exportData(currentPOIs, `lumina-neo-pois-${currentLocId}.json`, 'application/json');
+    });
+
+    document.getElementById('import-pois-btn').addEventListener('click', async () => {
+        if (!confirm('Importing POIs will overwrite your current POIs for this location. Continue?')) return;
+        try {
+            const importedPOIs = await importData();
+            if (!Array.isArray(importedPOIs) || !importedPOIs.every(p => 'name' in p && 'description' in p)) {
+                throw new Error('Invalid POIs file format. Expected an array of POI objects with name and description.');
+            }
+            currentPOIs = importedPOIs;
+            renderPOIList();
+            const currentLocId = document.getElementById('poi-location-select').value;
+            await savePOIs(currentLocId, false); // Save the imported POIs to KV
+            alert('POIs imported successfully!');
+        } catch (err) {
+            alert('Error importing POIs: ' + err.message);
+            console.error('Import POIs error:', err);
+        }
     });
 }
 
 let currentPOIs = [];
 
-async function loadPOIs(locationId, refresh = false) {
+async function loadPOIs(locationId, refresh = false, city = '', state = '', country = '') {
     const listContainer = document.getElementById('poi-list-container');
     listContainer.innerHTML = 'Loading...';
 
     try {
         const data = await fetchApi('/poi/populate', 'POST', {
             userId: AppState.userId,
+            profileId: AppState.currentProfile.id,
             locationId,
+            city,
+            state,
+            country,
             refresh
         });
-        currentPOIs = data; // Store in module scope for editing
+        currentPOIs = data; 
         renderPOIList();
     } catch (err) {
         listContainer.innerHTML = `<p style="color: red;">Failed to load POIs: ${err.message}</p>`;
@@ -91,44 +126,49 @@ function renderPOIList() {
     const listContainer = document.getElementById('poi-list-container');
     
     if (currentPOIs.length === 0) {
-        listContainer.innerHTML = '<p>No POIs found. Click Regenerate or Add Manually.</p>';
+        listContainer.innerHTML = '<p style="text-align:center; padding: 20px; opacity: 0.6;">No POIs found. Click Regenerate or Add Manually.</p>';
         return;
     }
 
     listContainer.innerHTML = `
         <ul style="list-style: none; padding: 0;">
             ${currentPOIs.map((poi, index) => `
-                <li style="border-bottom: 1px solid #444; padding: 10px 0;">
-                    <div style="display: flex; justify-content: space-between; align-items: start;">
-                        <div style="flex: 1; margin-right: 10px;">
-                            <input type="text" class="poi-name-input" data-index="${index}" value="${poi.name}" style="font-weight: bold; margin-bottom: 5px;">
-                            <textarea class="poi-desc-input" data-index="${index}" rows="2" style="font-size: 0.9rem;">${poi.description}</textarea>
+                <li style="background: rgba(255,255,255,0.05); border-radius: 12px; padding: 15px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: start; border: 1px solid var(--glass-border);">
+                    <div style="flex: 1; margin-right: 10px;">
+                        <div class="form-group" style="margin-bottom: 10px;">
+                            <label>Name</label>
+                            <input type="text" class="poi-name-input" data-index="${index}" value="${poi.name}" placeholder="POI Name">
                         </div>
-                        <button class="btn btn-secondary btn-sm delete-poi-btn" data-index="${index}">&times;</button>
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <label>Description</label>
+                            <textarea class="poi-desc-input" data-index="${index}" rows="2" placeholder="Description"></textarea>
+                        </div>
                     </div>
+                    <button class="btn btn-secondary btn-sm delete-poi-btn" data-index="${index}" style="padding: 8px 12px; font-size: 0.85rem;">&times;</button>
                 </li>
             `).join('')}
         </ul>
     `;
 
-    // Bind edit events to update local state
     document.querySelectorAll('.poi-name-input').forEach(input => {
         input.addEventListener('change', (e) => {
-            const idx = e.target.dataset.index;
+            const idx = parseInt(e.target.dataset.index);
             currentPOIs[idx].name = e.target.value;
         });
     });
 
     document.querySelectorAll('.poi-desc-input').forEach(input => {
+        input.value = currentPOIs[parseInt(input.dataset.index)].description; // Ensure textarea gets correct initial value
         input.addEventListener('change', (e) => {
-            const idx = e.target.dataset.index;
+            const idx = parseInt(e.target.dataset.index);
             currentPOIs[idx].description = e.target.value;
         });
     });
 
     document.querySelectorAll('.delete-poi-btn').forEach(btn => {
         btn.addEventListener('click', (e) => {
-            const idx = e.target.dataset.index;
+            if (!confirm('Are you sure you want to delete this POI?')) return;
+            const idx = parseInt(e.target.dataset.index);
             currentPOIs.splice(idx, 1);
             renderPOIList();
         });
@@ -136,11 +176,11 @@ function renderPOIList() {
 }
 
 function addManualPOI() {
-    currentPOIs.unshift({ name: 'New POI', description: 'Description here...' });
+    currentPOIs.unshift({ name: 'New Point of Interest', description: 'A brief description of this point of interest.' });
     renderPOIList();
 }
 
-async function savePOIs(locationId) {
+async function savePOIs(locationId, showSuccessAlert = true) {
     const btn = document.getElementById('save-poi-btn');
     const originalText = btn.textContent;
     btn.textContent = 'Saving...';
@@ -151,7 +191,7 @@ async function savePOIs(locationId) {
             locationId,
             pois: currentPOIs
         });
-        alert('POIs saved successfully!');
+        if(showSuccessAlert) alert('POIs saved successfully!');
     } catch (err) {
         alert('Failed to save POIs: ' + err.message);
     } finally {

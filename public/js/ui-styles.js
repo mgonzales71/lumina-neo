@@ -1,5 +1,8 @@
 import { AppState } from './state.js';
 import { fetchApi } from './api.js';
+import { exportData, importData } from './utils.js';
+
+let currentEditingStyleIndex = null; 
 
 export function renderStyles() {
     const container = document.getElementById('styles-tab');
@@ -9,22 +12,34 @@ export function renderStyles() {
     let html = `
         <div class="card">
             <h2>Styles</h2>
-            <p>Define artistic styles to be used in image generation.</p>
+            <p>Define artistic styles to be used in image generation. The active style is inserted as <code>{style}</code> in your prompt template.</p>
+            <div style="display:flex; gap:10px; margin-bottom: 20px;">
+                <button id="export-styles-btn" class="btn btn-secondary" style="flex:1;">Export Styles</button>
+                <button id="import-styles-btn" class="btn btn-secondary" style="flex:1;">Import Styles</button>
+            </div>
             <ul id="style-list" style="list-style: none; padding: 0;">
+                ${profile.styles.length === 0 ? '<p style="text-align:center; padding: 20px; opacity: 0.6;">No styles added yet.</p>' : ''}
                 ${profile.styles.map((s, index) => `
-                    <li style="border-bottom: 1px solid #444; padding: 10px 0; display: flex; justify-content: space-between; align-items: start;">
+                    <li style="background: rgba(255,255,255,0.05); border-radius: 12px; padding: 15px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: start; border: 1px solid var(--glass-border); ${s.style === profile.activeStyleId ? 'border-color: var(--primary-color);' : ''}">
                         <div>
-                            <strong>${s.style}</strong>
-                            <p style="font-size: 0.9rem; color: #ccc; margin: 0;">${s.description}</p>
+                            <div style="font-size: 1.1rem; font-weight: 600;">
+                                ${s.style}
+                                ${s.style === profile.activeStyleId ? '<span style="font-size:0.8em; color:var(--primary-color); margin-left:6px;">✓ Active</span>' : ''}
+                            </div>
+                            <p style="font-size: 0.9rem; color: var(--text-secondary); margin: 0;">${s.description}</p>
                         </div>
-                        <button class="btn btn-secondary btn-sm delete-style-btn" data-index="${index}">Delete</button>
+                        <div style="display:flex; gap: 8px; flex-shrink:0; margin-left: 10px;">
+                            ${s.style !== profile.activeStyleId ? `<button class="btn btn-sm set-active-style-btn" data-index="${index}" style="padding: 8px 12px; font-size: 0.85rem;">Set Active</button>` : ''}
+                            <button class="btn btn-secondary btn-sm edit-style-btn" data-index="${index}" style="padding: 8px 12px; font-size: 0.85rem;">Edit</button>
+                            <button class="btn btn-secondary btn-sm delete-style-btn" data-index="${index}" style="padding: 8px 12px; font-size: 0.85rem;">Delete</button>
+                        </div>
                     </li>
                 `).join('')}
             </ul>
         </div>
 
         <div class="card">
-            <h3>Add New Style</h3>
+            <h3 id="style-form-title">Add New Style</h3>
             <div class="form-group">
                 <label>Style ID (e.g., "cyberpunk")</label>
                 <input type="text" id="style-id" placeholder="cyberpunk">
@@ -33,24 +48,56 @@ export function renderStyles() {
                 <label>Description</label>
                 <textarea id="style-desc" rows="3" placeholder="A futuristic, neon-lit cyberpunk cityscape..."></textarea>
             </div>
-            <button id="add-style-btn" class="btn">Add Style</button>
+            <div style="display: flex; gap: 10px;">
+                <button id="save-style-btn" class="btn" style="flex:1;">Add Style</button>
+                <button id="cancel-style-edit-btn" class="btn btn-secondary" style="flex:1; display:none;">Cancel Edit</button>
+            </div>
         </div>
     `;
 
     container.innerHTML = html;
 
-    // Delete
+    // Event Listeners
+    document.querySelectorAll('.set-active-style-btn').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+            const index = parseInt(e.target.dataset.index);
+            profile.activeStyleId = profile.styles[index].style;
+            await saveProfile(profile);
+            renderStyles();
+        });
+    });
+
     document.querySelectorAll('.delete-style-btn').forEach(btn => {
         btn.addEventListener('click', async (e) => {
-            const index = e.target.dataset.index;
+            if (!confirm('Are you sure you want to delete this style?')) return;
+            const index = parseInt(e.target.dataset.index);
             profile.styles.splice(index, 1);
             await saveProfile(profile);
             renderStyles();
         });
     });
 
-    // Add
-    document.getElementById('add-style-btn').addEventListener('click', async () => {
+    document.querySelectorAll('.edit-style-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const index = parseInt(e.target.dataset.index);
+            const styleToEdit = profile.styles[index];
+            
+            document.getElementById('style-id').value = styleToEdit.style;
+            document.getElementById('style-id').disabled = true; 
+            document.getElementById('style-desc').value = styleToEdit.description;
+            
+            document.getElementById('style-form-title').textContent = 'Edit Style';
+            document.getElementById('save-style-btn').textContent = 'Update Style';
+            document.getElementById('cancel-style-edit-btn').style.display = 'block';
+            currentEditingStyleIndex = index;
+        });
+    });
+
+    document.getElementById('cancel-style-edit-btn').addEventListener('click', () => {
+        resetStyleForm();
+    });
+
+    document.getElementById('save-style-btn').addEventListener('click', async () => {
         const id = document.getElementById('style-id').value.trim();
         const desc = document.getElementById('style-desc').value.trim();
 
@@ -59,16 +106,53 @@ export function renderStyles() {
             return;
         }
 
-        // Check unique
-        if (profile.styles.some(s => s.style === id)) {
-            alert('Style ID already exists.');
-            return;
-        }
+        const newStyle = { style: id, description: desc };
 
-        profile.styles.push({ style: id, description: desc });
+        if (currentEditingStyleIndex !== null) {
+            profile.styles[currentEditingStyleIndex] = newStyle;
+        } else {
+            if (profile.styles.some(s => s.style === id)) {
+                alert('Style ID already exists.');
+                return;
+            }
+            profile.styles.push(newStyle);
+        }
+        
         await saveProfile(profile);
+        resetStyleForm();
         renderStyles();
     });
+
+    document.getElementById('export-styles-btn').addEventListener('click', () => {
+        exportData(profile.styles, 'lumina-neo-styles.json', 'application/json');
+    });
+
+    document.getElementById('import-styles-btn').addEventListener('click', async () => {
+        if (!confirm('Importing styles will overwrite your current styles. Continue?')) return;
+        try {
+            const importedStyles = await importData();
+            if (!Array.isArray(importedStyles) || !importedStyles.every(s => 'style' in s && 'description' in s)) {
+                throw new Error('Invalid styles file format.');
+            }
+            profile.styles = importedStyles;
+            await saveProfile(profile);
+            renderStyles();
+            alert('Styles imported successfully!');
+        } catch (err) {
+            alert('Error importing styles: ' + err.message);
+            console.error('Import styles error:', err);
+        }
+    });
+}
+
+function resetStyleForm() {
+    document.getElementById('style-id').value = '';
+    document.getElementById('style-id').disabled = false;
+    document.getElementById('style-desc').value = '';
+    document.getElementById('style-form-title').textContent = 'Add New Style';
+    document.getElementById('save-style-btn').textContent = 'Add Style';
+    document.getElementById('cancel-style-edit-btn').style.display = 'none';
+    currentEditingStyleIndex = null;
 }
 
 async function saveProfile(profile) {

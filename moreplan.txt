@@ -1,0 +1,712 @@
+Web app written in HTML CSS and JavaScript.
+
+Leveraging static Cloudflare pages, workers and KV
+
+The Web app is an interface you use to configure profiles and settings that you store using Cloudflare key vault and then in combination with JavaScript cloudflare pages and workers you utilize that data to create images via AI based on numerous variables
+
+The web app will request your location 
+By Latitude and longitude in turn this will invoke a lookup of your city, state/region and country. 
+
+Other data will be determined and resolved 
+
+Dynamically updating  PROMPT VARIABLES variables such as 
+
+Time of Day: Daytime or nighttime 
+* Time-of-day buckets beyond day/night: “blue_hour”, “golden_hour”, “dawn”, “morning”, “noon”, “afternoon”, “sunset”, “late_night”
+* Day of week 
+    * Monday, Tuesday, etc
+    * (weekday vs weekend)
+Current Weather conditions:
+Such as raining, drizzle, snow, fog, cloudy,
+Clear, partially cloudy, etc
+Time HH:MM a (23:59 pm)
+Date DD-MM-YYYY (15-12-2026)
+Weather Forecast
+Precipitation Chance
+Temperature F
+Wind speed
+Visibility
+Cloud cover percentage 
+Sun - 
+* UV index
+* “sun strength”  (low/medium/high)
+Sunrise
+Sunset
+Moon Phase 
+Moon Illumination percentage 
+Moonrise (Time Date)
+Moonset (Time Date)
+Geography
+*  context: urban/suburban/rural; coastal/inland; mountains/flat; near body of water
+
+
+These will be referred to as PROMPT VARIABLES
+
+THEME DATA
+
+The user via the web app can define a list of themes here the user can view, add, delete, change, import and export these entries.
+They have an ordinal number index  So May 5 would be 05 * 100
+
+Entered as such so begin 505 end 505 - Cinco de Mayo
+
+Some examples of THEME DATA:
+
+[
+  {
+    "Begin": 505,
+    "End": 505,
+    "Theme": "Cinco de Mayo"
+  },
+  {
+    "Begin": 1015,
+    "End": 1031,
+    "Theme": "Halloween"
+  },
+  {
+    "Begin": 1220,
+    "End": 1231,
+    "Theme": "Holiday Season"
+  }
+]
+
+STYLE DATA
+
+There will also be user defined STYLES that are managed in the web app where the user can view, add, delete, change, import and export STYLE DATA
+
+Example STYLES data 
+
+[
+  {
+    "style": "hyper_photo_realistic",
+    "description": "A visual style that looks more real than a typical photograph, with extreme detail, lifelike textures, precise lighting, and sharp clarity."
+  },
+  {
+    "style": "cinematic",
+    "description": "A dramatic visual style inspired by film, with moody lighting, strong composition, and a polished, story-driven look."
+  },
+  {
+    "style": "watercolor",
+    "description": "A soft painted style with fluid brushwork, blended colors, and a light, artistic texture."
+  }
+]
+
+LOCATIONS
+
+Here the user can manage locations 
+With options to list/View, import, export, add, delete them - when ADDING the web app will use online resources to “sanatize” or verify the data - this will auto populate all the fields with corrected information, spelling, case, latitude 
+, longitude etc and if more than one location is found based on partial information entered the user is asked to select the correct location then it is stored once they choose to SAVE
+
+Example Data
+
+[
+  {
+    "city": "Portland",
+    "state": "Oregon",
+    "country": "USA",
+    "lat": 45.52,
+    "lon": -122.67
+  },
+  {
+    "city": "Woodburn",
+    "state": "Oregon",
+    "country": "United States",
+    "lat": 45.1437,
+    "lon": -122.8554
+  },
+  {
+    "city": "Paris",
+    "state": "Île-de-France",
+    "country": "France",
+    "lat": 48.8589,
+    "lon": 2.32
+  }
+] 
+
+POINTS OF INTERESTS or POI
+
+This is where Points of Interest are managed.
+
+The user can import, export, list, add, modify, delete, “sanitize” or consult AI to lookup at an existing entry - find matching info and offer to correct the entry based on what info is found relative to the LOCATION it is being added to
+
+Once a LOCATION has been saved the user has the option under POI or Points of interest to populate that location with POI info here is a sample prompt for AI if requested 
+
+“You are an expert on points of interest and other unique and notable places of things views or vistas of requested locations. Do not cite sources or any additional information beyond returning one item per line with no formatting. Task: Generate a list of up to 30 visually unique points of interest, landmarks, or vistas in or nearby the city of {city} in the state of {state}. Format Rules: 1. Output ONLY a raw JSON array of objects. 2. Do NOT include markdown code blocks (no backticks). 3. Do NOT include any introductory or concluding text. 4. Each object must have exactly two keys: "name" and "description". 5. "description" must be 1-2, concise sentences that visually describes the named point of interest.”
+
+Once processed you can store that 
+
+Some example POI data for a few LOCATIONS 
+
+{
+  "portland": [
+    {
+      "name": "Lan Su Chinese Garden",
+      "description": "A tranquil traditional Chinese garden in Old Town Chinatown, featuring native plants, koi ponds, covered walkways, and a teahouse."
+    }
+  ],
+  "woodburn": [
+    {
+      "name": "Settlemeyer House",
+      "description": "A weathered late‑19th-century wood‑frame house in Woodburn with steep gables and ornate gingerbread trim, tall sash windows, a shaded wraparound porch, overgrown flowerbeds and a mossy stone path, bathed in warm, dappled afternoon light."
+    }
+  ],
+  "paris": [
+    {
+      "name": "Eiffel Tower, Paris",
+      "description": "Soaring wrought-iron lattice tower rising over Paris, its intricate ironwork silhouetted against a twilight sky with warm golden illumination and reflections on the Seine."
+    }
+  ]
+}
+
+PROMPTS 
+
+This is where the user can list, edit, delete, add, import, export defined prompts 
+
+This is where the user will be able to choose “chips” of all available PROMPT VARIABLES 
+
+So for example you could define a few prompts as such.  2 default prompts would be POI_DAYTIME and POI_NIGHTTIME
+
+a prompt chosen based on if your current location IS DAY? or IS_NIGHT
+
+EXAMPLE PROMPT data
+
+Note the PROMPT VARIABLES referenced by the enclosure in {} for example
+
+{STYLE} would refer to the style chosen for a particular PROFILE settings, {TIMEOFDAY} would resolve to “Daytime” or “Nighttime”
+
+{
+  "day": "Generate a {style} style image of {poi_name} in {city}, {state_region}. POI description: {poi_desc}. Ensure architectural and geographical accuracy based on real-world references. Time: {time_of_day} {date} {time}. Weather: {weather}, {temperature}. Sunrise at {sunrise} and sunset {sunset} for realistic positioning. Adjust sun visibility based on {weather}. Include the UV index and visibility in the depiction. Account for cloud cover to influence lighting and shadows. Safe Zone Framing: keep significant elements centered and critical content within 80-90 percent of the image width and height. Atmosphere: incorporate the theme of {theme} as a subtle, realistic element. Apply a professional, natural-looking auto-enhancement: brighten shadows, recover highlights, boost midtone contrast, and enhance clarity while preserving a photorealistic look.",
+  "night": "Generate a {style} style image of {poi_name} in {city}, {state_region}. POI description: {poi_desc}. Ensure architectural and geographical accuracy based on real-world references. Time: {time_of_day} {date} {time}. Weather: {weather}, {temperature}. Moon in {moon_phase} with {moon_illumination} illumination. Account for moonrise {moonrise} and moonset {moonset} for realistic positioning. Adjust moon visibility based on {weather}. Safe Zone Framing: keep significant elements centered and critical content within 80-90 percent of the image width and height. Atmosphere: incorporate the theme of {theme} as a subtle, realistic element. Apply a professional, natural-looking auto-enhancement: brighten shadows, recover highlights, boost midtone contrast, and enhance clarity while preserving a photorealistic look."
+}
+
+When referenced to be used in a prompt to AI the Prompt Variables for prompt for daytime or DAY would be resolved for example to
+
+Generate a 3D animation render style image of Portland Japanese Garden in Portland, Oregon. POI description: A serene oasis within Washington Park, this garden offers tranquil streams, a teahouse, and meticulously designed landscapes representing different Japanese gardening styles, with some areas providing panoramic forest views.. Ensure architectural and geographical accuracy based on real-world references. Time: Daytime, 03-20-2026 12:38:17 PM. Weather: Overcast, 61°F. Sunrise at 07:13 and sunset at 19:24 for realistic positioning. Adjust sun visibility based on Overcast. Include the UV index and visibility in the depiction. Account for cloud cover to influence lighting and shadows. Safe Zone Framing: keep significant elements centered and critical content within 80-90 percent of the image width and height. Atmosphere: incorporate the theme of General as a subtle, realistic element. Apply a professional, natural-looking auto-enhancement: brighten shadows, recover highlights, boost midtone contrast, and enhance clarity while preserving a photorealistic look.
+Pulling this all together  
+
+IMAGE SIZES
+
+This is where in the web app user can list. Add edit delete import, or export defined image sizes.
+
+One special image size it’s predefined is called “DEVICE” - this is defined as the height and width and pixels of your current device, you’re running this on and will always be dependent on that
+
+Also predefined or initially pre-popwulated would be some entries  like the iPhone, iPhone Pro, iPhone Pro, Max, iPad, Desktop and Square.
+
+So for example 
+
+{
+  "default": "DEVICE",
+  "sizes": {
+    "DEVICE": {
+      "label": "This Device",
+      "mode": "dynamic",
+      "width": null,
+      "height": null
+    },
+    "IPHONE": {
+      "label": "iPhone",
+      "mode": "preset",
+      "width": 1179,
+      "height": 2556
+    },
+    "IPHONE_PRO": {
+      "label": "iPhone Pro",
+      "mode": "preset",
+      "width": 1206,
+      "height": 2622
+    },
+    "IPHONE_PRO_MAX": {
+      "label": "iPhone Pro Max",
+      "mode": "preset",
+      "width": 1320,
+      "height": 2868
+    },
+    "IPAD": {
+      "label": "iPad",
+      "mode": "preset",
+      "width": 2064,
+      "height": 2752
+    },
+    "DESKTOP": {
+      "label": "Desktop",
+      "mode": "preset",
+      "width": 1920,
+      "height": 1080
+    },
+    "SQUARE": {
+      "label": "Square",
+      "mode": "preset",
+      "width": 2048,
+      "height": 2048
+    }
+  }
+}
+
+
+
+AI SERVICES 
+
+This is where the current AI services are listed and respective settings are set, mapped, options selected etc 
+
+Think of this as a service plug in or defined “service registry” JSON file, where each provider has the same top-level shape and each capability lives under `endpoints.image` or `endpoints.text`. That makes it easy to plug new providers into the app and render UI fields, auth requirements, and request builders from data instead of hardcoded provider-specific logic.
+
+## Structure
+
+For Pollinations, the docs are explicit enough that you can safely hardcode the image and text endpoints, model-list URLs, and documented arguments. For OpenRouter, the cleaner pattern is to treat it as discovery-first, because its docs emphasize programmatic model discovery through the Models API and filtering by `output_modalities=image` or `output_modalities=text,image`
+
+## Starter JSON
+
+This example gives you one consistent schema for both services, with Pollinations fully populated from the retrieved docs and OpenRouter set up so your app can hydrate model-specific details from its models API. Pollinations exposes `https://image.pollinations.ai/models` for image models, `https://text.pollinations.ai/models` for text models, `GET https://image.pollinations.ai/prompt/{prompt}` for images, and `POST https://text.pollinations.ai/openai` for OpenAI-style chat/multimodal requests.
+
+```json
+{
+  "schema_version": "1.0",
+  "services": [
+    {
+      "id": "pollinations",
+      "name": "Pollinations",
+      "description": "Pollinations AI developer service with image generation, text generation, and an OpenAI-compatible chat/multimodal endpoint.",
+      "docs_url": "https://enter.pollinations.ai/api/docs",
+      "api_key_url": "https://enter.pollinations.ai",
+      "auth": {
+        "type": "bearer",
+        "header": "Authorization: Bearer {API_KEY}"
+      },
+      "capabilities": [
+        "image_generation",
+        "text_generation",
+        "chat"
+      ],
+      "endpoints": {
+        "image": {
+          "models_json_url": "https://image.pollinations.ai/models",
+          "generate": {
+            "method": "GET",
+            "url_template": "https://image.pollinations.ai/prompt/{prompt}",
+            "request_format": "prompt in URL path, options in query string",
+            "response_format": "binary image"
+          },
+          "args": [
+            { "name": "prompt", "location": "path", "required": true, "type": "string" },
+            { "name": "model", "location": "query", "required": false, "type": "string" },
+            { "name": "seed", "location": "query", "required": false, "type": "number" },
+            { "name": "width", "location": "query", "required": false, "type": "number" },
+            { "name": "height", "location": "query", "required": false, "type": "number" },
+            { "name": "image", "location": "query", "required": false, "type": "string" },
+            { "name": "nologo", "location": "query", "required": false, "type": "boolean" },
+            { "name": "private", "location": "query", "required": false, "type": "boolean" },
+            { "name": "enhance", "location": "query", "required": false, "type": "boolean" },
+            { "name": "safe", "location": "query", "required": false, "type": "boolean" },
+            { "name": "transparent", "location": "query", "required": false, "type": "boolean" },
+            { "name": "referrer", "location": "query", "required": false, "type": "string" }
+          ]
+        },
+        "text": {
+          "models_json_url": "https://text.pollinations.ai/models",
+          "generate": {
+            "method": "GET",
+            "url_template": "https://text.pollinations.ai/{prompt}",
+            "request_format": "prompt in URL path, options in query string",
+            "response_format": "plain text or JSON string when json=true"
+          },
+          "args": [
+            { "name": "prompt", "location": "path", "required": true, "type": "string" },
+            { "name": "model", "location": "query", "required": false, "type": "string" },
+            { "name": "seed", "location": "query", "required": false, "type": "number" },
+            { "name": "temperature", "location": "query", "required": false, "type": "number" },
+            { "name": "top_p", "location": "query", "required": false, "type": "number" },
+            { "name": "presence_penalty", "location": "query", "required": false, "type": "number" },
+            { "name": "frequency_penalty", "location": "query", "required": false, "type": "number" },
+            { "name": "json", "location": "query", "required": false, "type": "boolean" },
+            { "name": "system", "location": "query", "required": false, "type": "string" },
+            { "name": "stream", "location": "query", "required": false, "type": "boolean" },
+            { "name": "private", "location": "query", "required": false, "type": "boolean" },
+            { "name": "referrer", "location": "query", "required": false, "type": "string" }
+          ],
+          "chat": {
+            "method": "POST",
+            "url": "https://text.pollinations.ai/openai",
+            "content_type": "application/json",
+            "request_format": "OpenAI-compatible chat/completions JSON",
+            "body_args": [
+              { "name": "model", "required": true, "type": "string" },
+              { "name": "messages", "required": true, "type": "array" },
+              { "name": "seed", "required": false, "type": "number" },
+              { "name": "temperature", "required": false, "type": "number" },
+              { "name": "top_p", "required": false, "type": "number" },
+              { "name": "presence_penalty", "required": false, "type": "number" },
+              { "name": "frequency_penalty", "required": false, "type": "number" },
+              { "name": "stream", "required": false, "type": "boolean" },
+              { "name": "jsonMode", "required": false, "type": "boolean" },
+              { "name": "response_format", "required": false, "type": "object" },
+              { "name": "tools", "required": false, "type": "array" },
+              { "name": "tool_choice", "required": false, "type": "string_or_object" },
+              { "name": "private", "required": false, "type": "boolean" },
+              { "name": "referrer", "required": false, "type": "string" }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": "openrouter",
+      "name": "OpenRouter",
+      "description": "Unified model gateway with programmatic model discovery, including models that support image output.",
+      "docs_url": "https://openrouter.ai/docs/guides/overview/multimodal/image-generation",
+      "api_key_url": "https://openrouter.ai/settings/keys",
+      "auth": {
+        "type": "bearer",
+        "header": "Authorization: Bearer {API_KEY}"
+      },
+      "capabilities": [
+        "image_generation",
+        "chat"
+      ],
+      "endpoints": {
+        "image": {
+          "models_json_url": "https://openrouter.ai/api/v1/models?output_modalities=image",
+          "multimodal_models_json_url": "https://openrouter.ai/api/v1/models?output_modalities=text,image",
+          "generate": {
+            "method": "POST",
+            "url": "https://openrouter.ai/api/v1/chat/completions",
+            "request_format": "OpenAI-compatible JSON",
+            "response_format": "model-dependent image output"
+          },
+          "args_source_url": "https://openrouter.ai/docs/guides/overview/multimodal/image-generation",
+          "args": []
+        },
+        "text": {
+          "models_json_url": "https://openrouter.ai/api/v1/models",
+          "generate": {
+            "method": "POST",
+            "url": "https://openrouter.ai/api/v1/chat/completions",
+            "request_format": "OpenAI-compatible JSON",
+            "response_format": "chat completion JSON"
+          },
+          "args_source_url": "https://openrouter.ai/docs/guides/overview/models",
+          "args": []
+        }
+      }
+    }
+  ]
+}
+```
+
+## Notes
+
+Pollinations also documents that API keys are created in the developer console at `enter.pollinations.ai`, and its developer API exposes restricted model-list endpoints such as `/image/models` and `/text/models` when key permissions apply. OpenRouter’s docs specifically call out using the Models API with `output_modalities=image` or `output_modalities=text,image`, so I would populate model metadata dynamically there instead of trying to freeze every model’s requirements by hand.
+
+For your plugin layer, I would read each service into a common internal shape like `service -> endpoints -> args`, then build request forms from the `args` array and request serializers from `request_format`. That gives you one path for Pollinations today and makes it straightforward to add providers later without rewriting UI logic.
+
+So I would split this into **two** JSON layers: a provider registry that describes what each service supports, and a saved user settings object that stores the user’s chosen key, selected models, and per-endpoint defaults. Pollinations has separate image and text model lists and separate image versus text/chat request patterns, while OpenRouter is better treated as a discovery-driven provider built around a models API plus a chat-completions-style endpoint, so separating “definition” from “saved settings” will keep your app simpler.
+
+## Recommended shape
+
+The provider registry should be static app data, and the saved settings should contain only user-specific values like API keys, chosen models, and default width or height. That works well for your plugin idea because the UI can render fields from the registry and save only the values the user actually picked.
+
+```json
+{
+  "providerRegistry": {
+    "pollinations": {},
+    "openrouter": {}
+  },
+  "providerSettings": {
+    "activeProvider": "pollinations",
+    "providers": {
+      "pollinations": {},
+      "openrouter": {}
+    }
+  }
+}
+```
+
+## Registry example
+
+I’d make each provider definition answer four questions: how to authenticate, how to list models, how to generate image output, and which settings fields should appear in the UI. This fits Pollinations especially well because its image and text APIs are clearly separated, while OpenRouter benefits from a shared schema that still lets you discover supported models dynamically.
+
+```json
+{
+  "providerRegistry": {
+    "pollinations": {
+      "id": "pollinations",
+      "label": "Pollinations",
+      "docsUrl": "https://enter.pollinations.ai/api/docs",
+      "apiKeyUrl": "https://enter.pollinations.ai",
+      "auth": {
+        "type": "bearer",
+        "headerName": "Authorization",
+        "format": "Bearer {API_KEY}"
+      },
+      "categories": {
+        "image": {
+          "enabled": true,
+          "modelsUrl": "https://image.pollinations.ai/models",
+          "generate": {
+            "method": "GET",
+            "urlTemplate": "https://image.pollinations.ai/prompt/{prompt}",
+            "promptLocation": "path",
+            "parameterLocation": "query"
+          },
+          "fields": [
+            { "key": "model", "type": "select", "source": "models" },
+            { "key": "width", "type": "number" },
+            { "key": "height", "type": "number" },
+            { "key": "seed", "type": "number" },
+            { "key": "nologo", "type": "boolean" },
+            { "key": "private", "type": "boolean" },
+            { "key": "enhance", "type": "boolean" },
+            { "key": "safe", "type": "boolean" },
+            { "key": "transparent", "type": "boolean" }
+          ]
+        },
+        "text": {
+          "enabled": true,
+          "modelsUrl": "https://text.pollinations.ai/models",
+          "generate": {
+            "method": "POST",
+            "url": "https://text.pollinations.ai/openai",
+            "contentType": "application/json",
+            "promptLocation": "messages"
+          },
+          "fields": [
+            { "key": "model", "type": "select", "source": "models" },
+            { "key": "temperature", "type": "number" },
+            { "key": "top_p", "type": "number" },
+            { "key": "presence_penalty", "type": "number" },
+            { "key": "frequency_penalty", "type": "number" },
+            { "key": "jsonMode", "type": "boolean" },
+            { "key": "stream", "type": "boolean" },
+            { "key": "private", "type": "boolean" }
+          ]
+        }
+      }
+    },
+    "openrouter": {
+      "id": "openrouter",
+      "label": "OpenRouter",
+      "docsUrl": "https://openrouter.ai/docs/guides/overview/multimodal/image-generation",
+      "apiKeyUrl": "https://openrouter.ai/settings/keys",
+      "auth": {
+        "type": "bearer",
+        "headerName": "Authorization",
+        "format": "Bearer {API_KEY}"
+      },
+      "categories": {
+        "image": {
+          "enabled": true,
+          "modelsUrl": "https://openrouter.ai/api/v1/models?output_modalities=image",
+          "multimodalModelsUrl": "https://openrouter.ai/api/v1/models?output_modalities=text,image",
+          "generate": {
+            "method": "POST",
+            "url": "https://openrouter.ai/api/v1/chat/completions",
+            "contentType": "application/json",
+            "promptLocation": "messages"
+          },
+          "fields": [
+            { "key": "model", "type": "select", "source": "models" },
+            { "key": "width", "type": "number", "optional": true },
+            { "key": "height", "type": "number", "optional": true },
+            { "key": "seed", "type": "number", "optional": true },
+            { "key": "quality", "type": "text", "optional": true },
+            { "key": "background", "type": "text", "optional": true }
+          ]
+        },
+        "text": {
+          "enabled": true,
+          "modelsUrl": "https://openrouter.ai/api/v1/models",
+          "generate": {
+            "method": "POST",
+            "url": "https://openrouter.ai/api/v1/chat/completions",
+            "contentType": "application/json",
+            "promptLocation": "messages"
+          },
+          "fields": [
+            { "key": "model", "type": "select", "source": "models" },
+            { "key": "temperature", "type": "number", "optional": true },
+            { "key": "top_p", "type": "number", "optional": true },
+            { "key": "max_tokens", "type": "number", "optional": true }
+          ]
+        }
+      }
+    }
+  }
+}
+```
+
+## Saved settings example
+
+The saved settings object should only hold actual user choices, not the whole provider definition again. That means one place for credentials, one place for model selection, and one place for default parameters your app injects before it adds the final programmatically built prompt.
+
+```json
+{
+  "providerSettings": {
+    "activeProvider": "pollinations",
+    "providers": {
+      "pollinations": {
+        "enabled": true,
+        "apiKey": "",
+        "image": {
+          "selectedModel": "flux",
+          "defaults": {
+            "width": 1320,
+            "height": 2868,
+            "private": true,
+            "safe": false,
+            "enhance": false,
+            "transparent": false,
+            "nologo": true
+          }
+        },
+        "text": {
+          "selectedModel": "openai",
+          "defaults": {
+            "temperature": 0.7,
+            "jsonMode": false,
+            "stream": false,
+            "private": true
+          }
+        }
+      },
+      "openrouter": {
+        "enabled": false,
+        "apiKey": "",
+        "image": {
+          "selectedModel": "",
+          "defaults": {
+            "width": 1320,
+            "height": 2868
+          }
+        },
+        "text": {
+          "selectedModel": "",
+          "defaults": {
+            "temperature": 0.7
+          }
+        }
+      }
+    }
+  }
+}
+```
+
+## Mapping logic
+
+In practice, your UI can read `providerRegistry[providerId].categories.image.fields` to know which controls to show, then bind those controls to `providerSettings.providers[providerId].image.defaults`. For model pickers, Pollinations can read from its separate image or text model URLs, while OpenRouter can populate choices from its models API and filter by image-capable or text-capable models.
+
+A small example mapping flow would be:
+- Load registry.
+- Load saved settings.
+- When provider changes, render fields from registry.
+- Fetch models from `modelsUrl`.
+- Save only `selectedModel`, `apiKey`, and `defaults` back into settings.
+
+## Small improvements
+
+I’d also add `supports`, `defaultValues`, and `valueType` metadata to each field so your form generator knows whether a field is a checkbox, select, free text, integer, or float. 
+
+The HOME tab of the web app
+
+A proportional image placeholder based on chosen image size is displayed initially 
+
+Below it is a GENERATE IMAGE button 
+
+This will pull all the settings and data together taking into account the following work flow 
+
+Your current location
+
+Is it daytime or nighttime at this location?
+
+Do we have a location already defined and saved?  
+
+If not save in previously defined structure 
+
+Do we have cached information about points of interest for your current location?
+
+If so, pick one randomly from the cache 
+
+If not use the AI text service endpoint requesting  “Generate a list of up to 30 visually unique points of interest, landmarks, or vistas in or nearby the city of {city} in the state of {state} reply in JSON format each object must have exactly two keys: "name" and "description" and "description" must be 1-2, concise sentences that visually describes the named point of interest.”
+
+Save in previously defined data structure
+
+Dynamically lookup the prompt variables 
+
+Get the the prompt based on if DAY or NIGHT 
+
+resolve the prompt and substitute variables with values
+
+Lookup what provider is selected  
+Then the model and options defined in setting
+
+Pass the now assembled information to the service provider - image endpoint and display the image allowing the user to view larger or save / share the image.
+
+Also provide a chevron or reveal button to show the resolved prompt and a nice list format of all used prompt variables and the values of those and any error messages or response from provided  for debugging by the user 
+
+In settings the user should also have the ability to create edit delete load switch export import profiles which all settings saved for the named profile.
+
+this named profile will also have its settings synced to the “cloud” the Cloudflare Key vault 
+
+For security there should be 
+
+SAVED SECRETS on CloudFlare
+
+USER KEY - Defined per user
+USERID KEY 
+
+ADMIN KEY or PIN - for admin 
+functions like create USER 
+
+THE USERID - DEFAULT should always exist and is reserved for ADMIN with the PIN being required when certain action being taken
+
+PROFILES ARE Saved under USERID
+
+NOT a direct mapping but an example of what I could look like but using appropriate information and setting from the web app
+
+{
+  "users": {
+    "DEFAULT": {
+      "passkey": "default-passkey-here",
+      "profiles": {
+        "PROFILE1": {
+          "name": "Home",
+          "email": "default@example.com",
+          "settings": {
+            "theme": "dark",
+            "language": "en"
+          }
+        },
+        "PROFILE2": {
+          "name": "Work",
+          "email": "default.work@example.com",
+          "settings": {
+            "theme": "light",
+            "language": "en"
+          }
+        }
+      }
+    },
+    "USER1": {
+      "passkey": "user1-passkey-here",
+      "profiles": {
+        "PROFILE1": {
+          "name": "Personal",
+          "email": "user1@example.com",
+          "settings": {
+            "theme": "dark",
+            "language": "en"
+          }
+        },
+        "PROFILE2": {
+          "name": "Shared",
+          "email": "shared@example.com",
+          "settings": {
+            "theme": "light",
+            "language": "es"
+          }
+        }
+      }
+    }
+  }
+}
+
+One final component is the ability to call an action from iOS shortcuts that will use a proxy server running on Cloudflare based on the latitude, longitude USERID and PASSKEY and PROFILE sent to the proxy to return in JSON format the populated image URL, the POI name, POI description
+
+On the backend the basic logic of do we have cached info? If not look up poi’s for the location, cache them, pick a random one, gather appropriate settings, resolve prompt, format for profiles provide and proper image endpoint, return to iOS shortcut so the shortcut can request the actual image after extracting it from the returned JSON

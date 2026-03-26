@@ -10,6 +10,7 @@ export interface Env {
   KV_LOCATIONS: KVNamespace;
   KV_POI: KVNamespace;
   KV_SYSTEM?: KVNamespace;
+  ADMIN_PIN: string;
 }
 
 /**
@@ -217,7 +218,7 @@ export interface ProfileSettings {
   email?: string;
 
   // UI preferences
-  theme: "light" | "dark";
+  appearance: "light" | "dark" | "auto";
   language: string;
 
   // Prompt & visual configuration

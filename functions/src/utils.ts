@@ -2,7 +2,7 @@ import { ThemeEntry } from './types';
 
 /**
  * Lumina Neo Utilities
- * Version: v1.1.0
+ * Version: v1.2.0
  */
 
 export function renderPrompt(template: string, vars: Record<string, any>): string {
@@ -42,35 +42,41 @@ export async function reverseGeocode(lat: number, lon: number) {
  */
 export async function getWeather(lat: number, lon: number) {
   try {
-    const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,apparent_temperature,precipitation,weather_code,cloud_cover,wind_speed_10m,visibility&daily=sunrise,sunset&temperature_unit=fahrenheit&wind_speed_unit=mph&precipitation_unit=inch&timezone=auto&forecast_days=1`;
-    
+    const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,precipitation,weather_code,cloud_cover,wind_speed_10m,visibility,uv_index&daily=sunrise,sunset,precipitation_probability_max&temperature_unit=fahrenheit&wind_speed_unit=mph&precipitation_unit=inch&timezone=auto&forecast_days=1`;
+
     const response = await fetch(url);
     const data = await response.json() as any;
     const current = data.current || {};
     const daily = data.daily || {};
+    const utcOffsetSeconds: number = data.utc_offset_seconds || 0;
 
     return {
       description: getWeatherDescription(current.weather_code),
       precip: current.precipitation || 0,
+      precipChance: daily.precipitation_probability_max?.[0] || 0,
       tempF: Math.round(current.temperature_2m || 0),
       windSpeed: Math.round(current.wind_speed_10m || 0),
       visibility: Math.round((current.visibility || 0) / 1609.34), // meters to miles
       cloudCover: current.cloud_cover || 0,
-      uvIndex: 0, // Not in basic current, can add later if needed
+      uvIndex: current.uv_index || 0,
       sunrise: daily.sunrise?.[0]?.split('T')?.[1] || '06:00',
       sunset: daily.sunset?.[0]?.split('T')?.[1] || '18:00',
+      utcOffsetSeconds,
     };
   } catch (err) {
     console.error('Open-Meteo failed:', err);
     return {
       description: 'Clear',
       precip: 0,
+      precipChance: 0,
       tempF: 70,
       windSpeed: 0,
       visibility: 10,
       cloudCover: 0,
+      uvIndex: 0,
       sunrise: '06:00',
-      sunset: '18:00'
+      sunset: '18:00',
+      utcOffsetSeconds: 0,
     };
   }
 }

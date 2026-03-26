@@ -1,16 +1,12 @@
 /**
  * Lumina Neo Frontend
- * Version: v1.0.2
+ * Version: v1.1.4
  * SPA application bootstrapping and navigation
  */
 import { renderHome } from './ui-home.js';
 import { renderLogin } from './ui-login.js';
 import { AppState } from './state.js';
 import { fetchApi } from './api.js';
-
-// Lazy imports handled in switch, but we can dynamic import
-// or static import if we prefer. Given the size, static is fine but dynamic is cleaner for SPA.
-// Let's stick to dynamic imports for non-critical tabs as per previous pattern for 'profiles'.
 
 document.addEventListener('DOMContentLoaded', () => {
     initApp();
@@ -22,7 +18,6 @@ async function initApp() {
     if (!AppState.userId) {
         console.log('No user logged in. Showing login screen.');
         renderLogin(() => {
-            // Reload to clear any stale state or just re-init
             initApp();
         });
         return;
@@ -30,12 +25,12 @@ async function initApp() {
 
     try {
         await loadProfile();
+        await applyAppearance();
         setupNavigation();
-        renderHome(); // Initial render
+        renderHome();
     } catch (err) {
         console.error('Initialization failed:', err);
         if (err.message.includes('Auth') || err.message.includes('401')) {
-            // Logout and retry
             AppState.userId = null;
             AppState.save();
             initApp();
@@ -59,29 +54,70 @@ async function loadProfile() {
     }
 }
 
+export async function applyAppearance() {
+    const profile = AppState.currentProfile;
+    if (!profile) return;
+
+    let mode = profile.appearance || 'auto';
+
+    if (mode === 'auto') {
+        let isDay = false;
+        
+        try {
+            const pos = await new Promise((resolve, reject) => {
+                navigator.geolocation.getCurrentPosition(resolve, reject, { timeout: 5000 });
+            });
+            
+            const lat = pos.coords.latitude;
+            const lon = pos.coords.longitude;
+            
+            const res = await fetchApi(`/env?lat=${lat}&lon=${lon}`);
+            const { sunrise, sunset } = res.weather;
+            
+            const now = new Date();
+            const currentTime = now.getHours() * 60 + now.getMinutes();
+            
+            const parseTime = (t) => {
+                const [h, m] = t.split(':').map(Number);
+                return h * 60 + m;
+            };
+            
+            const sunriseMinutes = parseTime(sunrise);
+            const sunsetMinutes = parseTime(sunset);
+            
+            isDay = currentTime >= sunriseMinutes && currentTime < sunsetMinutes;
+            console.log(`Auto Appearance: now=${currentTime}, sunrise=${sunriseMinutes}, sunset=${sunsetMinutes}, isDay=${isDay}`);
+        } catch (err) {
+            console.warn('Geolocation or Env API failed for auto appearance, falling back to system preference:', err);
+            isDay = !window.matchMedia('(prefers-color-scheme: dark)').matches;
+        }
+        
+        mode = isDay ? 'light' : 'dark';
+    }
+
+    if (mode === 'dark') {
+        document.documentElement.setAttribute('data-theme', 'dark');
+    } else {
+        document.documentElement.removeAttribute('data-theme');
+    }
+}
+
 function setupNavigation() {
     const navButtons = document.querySelectorAll('.nav-btn');
     const tabPanes = document.querySelectorAll('.tab-pane');
 
     navButtons.forEach(btn => {
-        // Remove old listeners to avoid duplicates if re-inited
         const newBtn = btn.cloneNode(true);
         btn.parentNode.replaceChild(newBtn, btn);
         
         newBtn.addEventListener('click', () => {
             const tabId = newBtn.getAttribute('data-tab');
-            
-            // Update Active Button
             document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
             newBtn.classList.add('active');
-
-            // Update Active Pane
             tabPanes.forEach(pane => pane.classList.remove('active'));
             const targetPane = document.getElementById(`${tabId}-tab`);
             if (targetPane) {
                 targetPane.classList.add('active');
-                
-                // Dispatch event or call render function for tab
                 loadTabContent(tabId);
             }
         });
@@ -120,7 +156,6 @@ function loadTabContent(tabId) {
         case 'providers':
             import('./ui-providers.js').then(module => module.renderProviders());
             break;
-        // Add other cases as we implement them
         default:
             console.log(`Tab ${tabId} not implemented yet.`);
     }

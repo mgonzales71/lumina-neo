@@ -47,7 +47,7 @@ function createDefaultProfile(id: string): ProfileSettings {
   return {
     id,
     name: 'Default Profile',
-    theme: 'dark',
+    appearance: 'auto',
     language: 'en',
     activePromptDayId: 'POI_DAYTIME',
     activePromptNightId: 'POI_NIGHTTIME',
