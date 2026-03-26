@@ -143,7 +143,7 @@ function renderCategoryConfig(providerId, categoryName, def, userConf, dynamicMo
         if (modelsToRender.length > 0) {
             html += `<select class="config-field" data-provider="${providerId}" data-category="${categoryName}" data-key="selectedModel">`;
             modelsToRender.forEach(m => {
-                const label = m.paid ? `${m.label} *` : m.label;
+                const label = m.paid ? `${m.label} 💰` : m.label;
                 html += `<option value="${m.id}" ${userConf.selectedModel === m.id ? 'selected' : ''}>${label}</option>`;
             });
             html += `</select>`;
