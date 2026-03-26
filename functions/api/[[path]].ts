@@ -389,8 +389,9 @@ async function handlePopulatePOI(request: Request, env: Env): Promise<Response> 
     }
 
     const model = providerCfg.text?.selectedModel || 'openai';
-    const systemPrompt = "You are a travel assistant. Return a JSON array of interesting landmarks or points of interest for the given location. Each object MUST have 'name' and 'description' (1-2 sentences). NO OTHER TEXT. MAX " + (maxItems || 10) + " items.";
-    const userPrompt = `Location: ${city}, ${state}, ${country}`;
+    const limit = maxItems || 30;
+    const systemPrompt = "You are an expert on points of interest and other unique and notable places of things views or vistas of requested locations. Do not cite sources or any additional information beyond returning one item per line with no formatting.";
+    const userPrompt = `Task: Generate a list of up to ${limit} visually unique points of interest, landmarks, or vistas in or nearby the city of ${city} in the state of ${state}. Format Rules: 1. Output ONLY a raw JSON array of objects. 2. Do NOT include markdown code blocks (no backticks). 3. Do NOT include any introductory or concluding text. 4. Each object must have exactly two keys: "name" and "description". 5. "description" must be 1-2, concise sentences that visually describes the named point of interest.`;
 
     try {
         const response = await fetch(registry.categories.text.generate.url!, {
