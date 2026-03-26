@@ -1,7 +1,7 @@
 import { AppState } from './state.js';
 import { fetchApi } from './api.js';
 import { applyAppearance } from './app.js';
-import { exportData, importData } from '../utils.js';
+import { exportData, importData } from './utils.js';
 
 export async function renderProfiles() {
     const container = document.getElementById('profiles-tab');
