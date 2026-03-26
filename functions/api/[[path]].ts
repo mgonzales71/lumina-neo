@@ -412,12 +412,15 @@ async function handlePopulatePOI(request: Request, env: Env): Promise<Response> 
         let pois: POIEntry[] = [];
         
         const content = result.choices?.[0]?.message?.content || '[]';
-        const cleaned = content
-            .replace(/```json/g, '').replace(/```/g, '').trim()
-            // Remove control characters that break JSON.parse (newlines/tabs inside string values)
+        // Extract the JSON array by finding first [ and last ]
+        const start = content.indexOf('[');
+        const end = content.lastIndexOf(']');
+        if (start === -1 || end === -1 || end < start) throw new Error('No JSON array found in AI response');
+        const extracted = content.slice(start, end + 1)
             .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '')
-            .replace(/\n/g, ' ').replace(/\r/g, '').replace(/\t/g, ' ');
-        pois = JSON.parse(cleaned);
+            .replace(/\r?\n|\r/g, ' ')
+            .replace(/\t/g, ' ');
+        pois = JSON.parse(extracted);
 
         if (Array.isArray(pois) && pois.length > 0) {
             await env.KV_POI.put(key, JSON.stringify(pois));
