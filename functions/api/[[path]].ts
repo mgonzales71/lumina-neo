@@ -91,8 +91,8 @@ function createDefaultProfile(id: string, name = 'Default Profile'): ProfileSett
         pollinations: {
           enabled: true,
           apiKey: '',
-          image: { selectedModel: 'flux', defaults: { nologo: true, private: true, enhance: false, safe: false } },
-          text:  { selectedModel: 'openai', defaults: {} }
+          image: { selectedModel: 'gptimage', defaults: { nologo: true, private: true, enhance: false, safe: false } },
+          text:  { selectedModel: 'gemini-search', defaults: {} }
         },
         openrouter: {
           enabled: false,
@@ -388,7 +388,7 @@ async function handlePopulatePOI(request: Request, env: Env): Promise<Response> 
         return errorResponse('CONFIG_ERROR', 'Text provider not configured or enabled');
     }
 
-    const model = providerCfg.text?.selectedModel || 'openai';
+    const model = providerCfg.text?.selectedModel || 'gemini-search';
     const limit = maxItems || 30;
     const isUS = country === 'United States' || country === 'US' || country === 'USA';
     const locationStr = isUS
