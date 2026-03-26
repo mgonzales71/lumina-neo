@@ -215,6 +215,7 @@ async function handleGenerate() {
             
             const response = await fetchApi('/generate-image', 'POST', {
                 userId: AppState.userId,
+                passkey: AppState.passkey,
                 profileId: AppState.profileId,
                 lat: latitude,
                 lon: longitude,

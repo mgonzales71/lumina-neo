@@ -60,6 +60,7 @@ export function renderLogin(onSuccess) {
             
             // Login Success
             AppState.userId = data.userId;
+            AppState.passkey = passkey; // keep in memory for authenticated requests
             AppState.save(); // Persist
             
             // Cleanup and Callback
