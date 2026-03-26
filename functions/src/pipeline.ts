@@ -151,7 +151,11 @@ export async function generateImagePipeline(env: Env, params: PipelineParams): P
         poi_name: selectedPOI.name,
         poi_desc: selectedPOI.description,
         theme,
-        style: styleDesc
+        style: styleDesc,
+        // Convenience aliases for common short-form variable names in templates
+        time_of_day: time_of_day_simple,
+        datetime: `${localDateStr} ${localTimeStr}`,
+        temperature: `${weather.tempF}°F`
     };
 
     // 7. Template
