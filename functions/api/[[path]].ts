@@ -587,32 +587,26 @@ async function handleGetProviderModels(request: Request, env: Env): Promise<Resp
 
     if (providerId === 'pollinations') {
         try {
-            const endpoint = category === 'image' 
-                ? 'https://gen.pollinations.ai/image/models' 
-                : 'https://gen.pollinations.ai/v1/models';
-            
+            // Both endpoints return a flat array of full model objects with paid_only field
+            const endpoint = category === 'image'
+                ? 'https://gen.pollinations.ai/image/models'
+                : 'https://gen.pollinations.ai/text/models';
+
             const res = await fetch(endpoint);
             const data = await res.json() as any;
+            const raw = Array.isArray(data) ? data : (data.data || []);
 
-            let models = [];
-            if (category === 'image') {
-                // Filter models that can output image or video
-                models = Array.isArray(data) ? data
-                    .filter(m => m.output_modalities?.includes('image') || m.output_modalities?.includes('video'))
-                    .map(m => {
-                        const id = typeof m === 'string' ? m : (m.name || m.id);
-                        return { id, label: id, paid: m.paid_only || false };
-                    }) : [];
-            } else {
-                // Filter models that can output text
-                models = (data.data || [])
-                    .filter((m: any) => m.output_modalities?.includes('text'))
-                    .map((m: any) => ({
-                        id: m.name || m.id,
-                        label: m.name || m.id,
-                        paid: m.paid_only || false
-                    }));
-            }
+            const models = raw
+                .filter((m: any) => {
+                    const out = m.output_modalities || [];
+                    return category === 'image'
+                        ? out.includes('image') || out.includes('video')
+                        : out.includes('text');
+                })
+                .map((m: any) => {
+                    const id = m.name || m.id;
+                    return { id, label: id, paid: m.paid_only || false };
+                });
 
             return jsonResponse({ ok: true, data: models });
         } catch (err: any) {
