@@ -41,6 +41,12 @@ export function renderLogin(onSuccess) {
     const passkeyInput = document.getElementById('login-passkey');
     const errorMsg = document.getElementById('login-error');
 
+    // Pre-fill saved userId so user only needs to enter passkey
+    if (AppState.userId) {
+        userIdInput.value = AppState.userId;
+        passkeyInput.focus();
+    }
+
     btn.addEventListener('click', async () => {
         const userId = userIdInput.value.trim();
         const passkey = passkeyInput.value.trim();

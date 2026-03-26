@@ -15,8 +15,8 @@ document.addEventListener('DOMContentLoaded', () => {
 async function initApp() {
     console.log('Lumina Neo Initializing...');
 
-    if (!AppState.userId) {
-        console.log('No user logged in. Showing login screen.');
+    if (!AppState.userId || !AppState.passkey) {
+        console.log('No session. Showing login screen.');
         renderLogin(() => {
             initApp();
         });
