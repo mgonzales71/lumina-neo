@@ -2,7 +2,47 @@ import { AppState } from './state.js';
 import { fetchApi } from './api.js';
 import { exportData, importData } from './utils.js';
 
-let currentEditingPromptId = null; 
+let currentEditingPromptId = null;
+
+const PROMPT_VARIABLES = [
+    { group: 'POI',      vars: ['poi_name', 'poi_desc'] },
+    { group: 'Location', vars: ['city', 'state_region', 'country'] },
+    { group: 'Time',     vars: ['time_of_day', 'time_of_day_simple', 'time_of_day_bucket', 'datetime', 'date', 'time'] },
+    { group: 'Weather',  vars: ['weather', 'temperature', 'temperature_f', 'wind_speed_mph', 'cloud_cover_pct', 'visibility_mi', 'uv_index', 'precipitation_chance'] },
+    { group: 'Sun/Moon', vars: ['sunrise', 'sunset', 'moon_phase', 'moon_illumination_pct', 'moonrise', 'moonset'] },
+    { group: 'Style',    vars: ['theme', 'style'] },
+];
+
+function buildVariableChips() {
+    return PROMPT_VARIABLES.map(group => `
+        <div style="margin-bottom: 8px;">
+            <span style="font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.08em; opacity: 0.5; display: block; margin-bottom: 4px;">${group.group}</span>
+            <div style="display: flex; flex-wrap: wrap; gap: 6px;">
+                ${group.vars.map(v => `
+                    <button class="var-chip" data-var="${v}" style="
+                        background: rgba(var(--primary-rgb, 99,102,241), 0.15);
+                        border: 1px solid rgba(var(--primary-rgb, 99,102,241), 0.35);
+                        color: inherit;
+                        border-radius: 6px;
+                        padding: 3px 9px;
+                        font-size: 0.78rem;
+                        font-family: monospace;
+                        cursor: pointer;
+                        line-height: 1.6;
+                    ">{${v}}</button>
+                `).join('')}
+            </div>
+        </div>
+    `).join('');
+}
+
+function insertAtCursor(textarea, text) {
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    textarea.value = textarea.value.substring(0, start) + text + textarea.value.substring(end);
+    textarea.selectionStart = textarea.selectionEnd = start + text.length;
+    textarea.focus();
+}
 
 export function renderPrompts() {
     const container = document.getElementById('prompts-tab');
@@ -14,7 +54,6 @@ export function renderPrompts() {
     let html = `
         <div class="card">
             <h2>Prompt Templates</h2>
-            <p>Available variables: <code class="code-snippet">{poi_name}</code> <code class="code-snippet">{poi_desc}</code> <code class="code-snippet">{city}</code> <code class="code-snippet">{state_region}</code> <code class="code-snippet">{weather}</code> <code class="code-snippet">{temperature_f}</code> <code class="code-snippet">{temperature}</code> <code class="code-snippet">{time_of_day_simple}</code> <code class="code-snippet">{time_of_day}</code> <code class="code-snippet">{time_of_day_bucket}</code> <code class="code-snippet">{date}</code> <code class="code-snippet">{time}</code> <code class="code-snippet">{datetime}</code> <code class="code-snippet">{sunrise}</code> <code class="code-snippet">{sunset}</code> <code class="code-snippet">{moon_phase}</code> <code class="code-snippet">{moon_illumination_pct}</code> <code class="code-snippet">{moonrise}</code> <code class="code-snippet">{moonset}</code> <code class="code-snippet">{uv_index}</code> <code class="code-snippet">{cloud_cover_pct}</code> <code class="code-snippet">{visibility_mi}</code> <code class="code-snippet">{wind_speed_mph}</code> <code class="code-snippet">{theme}</code> <code class="code-snippet">{style}</code></p>
             <div style="display:flex; gap:10px; margin-bottom: 20px;">
                 <button id="export-prompts-btn" class="btn btn-secondary" style="flex:1;">Export Prompts</button>
                 <button id="import-prompts-btn" class="btn btn-secondary" style="flex:1;">Import Prompts</button>
@@ -58,7 +97,11 @@ export function renderPrompts() {
             </div>
             <div class="form-group">
                 <label>Template</label>
-                <textarea id="prompt-template" rows="3" placeholder="A shot of {poi_name} at {time_of_day_bucket}..."></textarea>
+                <div style="background: rgba(0,0,0,0.2); border: 1px solid var(--glass-border); border-radius: 10px; padding: 12px; margin-bottom: 8px;">
+                    <div style="font-size: 0.75rem; opacity: 0.6; margin-bottom: 10px;">Tap a variable to insert it at the cursor:</div>
+                    ${buildVariableChips()}
+                </div>
+                <textarea id="prompt-template" rows="5" placeholder="A {style} image of {poi_name} at {time_of_day_bucket}..."></textarea>
             </div>
             <div style="display: flex; gap: 10px;">
                 <button id="save-prompt-btn" class="btn" style="flex:1;">Add Prompt</button>
@@ -68,6 +111,14 @@ export function renderPrompts() {
     `;
 
     container.innerHTML = html;
+
+    // Variable chip insertion
+    const textarea = document.getElementById('prompt-template');
+    document.querySelectorAll('.var-chip').forEach(chip => {
+        chip.addEventListener('click', () => {
+            insertAtCursor(textarea, `{${chip.dataset.var}}`);
+        });
+    });
 
     // Event Listeners
     document.querySelectorAll('.set-day-prompt-btn').forEach(btn => {
@@ -100,29 +151,24 @@ export function renderPrompts() {
         btn.addEventListener('click', (e) => {
             const id = e.target.dataset.id;
             const promptToEdit = profile.prompts[id];
-            
+
             document.getElementById('prompt-id').value = promptToEdit.id;
-            document.getElementById('prompt-id').disabled = true; 
+            document.getElementById('prompt-id').disabled = true;
             document.getElementById('prompt-label').value = promptToEdit.label;
             document.getElementById('prompt-template').value = promptToEdit.template;
-            
+
             document.getElementById('prompt-form-title').textContent = 'Edit Prompt';
             document.getElementById('save-prompt-btn').textContent = 'Update Prompt';
             document.getElementById('cancel-prompt-edit-btn').style.display = 'block';
             currentEditingPromptId = id;
+
+            // Scroll form into view
+            document.getElementById('prompt-form-title').scrollIntoView({ behavior: 'smooth', block: 'start' });
         });
     });
 
     document.getElementById('cancel-prompt-edit-btn').addEventListener('click', () => {
         resetPromptForm();
-    });
-
-    document.querySelectorAll('.prompt-active-toggle').forEach(chk => {
-        chk.addEventListener('change', async (e) => {
-            const id = e.target.dataset.id;
-            profile.prompts[id].active = e.target.checked;
-            await saveProfile(profile);
-        });
     });
 
     document.getElementById('save-prompt-btn').addEventListener('click', async () => {
@@ -139,19 +185,19 @@ export function renderPrompts() {
             id,
             label,
             template,
-            active: profile.prompts[id] ? profile.prompts[id].active : true 
+            active: profile.prompts[id] ? profile.prompts[id].active : true
         };
 
         if (currentEditingPromptId !== null) {
-            profile.prompts[currentEditingPromptId] = newPrompt; 
+            profile.prompts[currentEditingPromptId] = newPrompt;
         } else {
             if (profile.prompts[id]) {
                 alert('Prompt ID already exists. Please choose a unique ID.');
                 return;
             }
-            profile.prompts[id] = newPrompt; 
+            profile.prompts[id] = newPrompt;
         }
-        
+
         await saveProfile(profile);
         resetPromptForm();
         renderPrompts();
@@ -169,7 +215,6 @@ export function renderPrompts() {
                 throw new Error('Invalid prompts file format. Expected an object with prompt objects.');
             }
             profile.prompts = importedPrompts;
-            // If active day/night prompts no longer exist, default to first available
             const ids = Object.keys(importedPrompts);
             if (ids.length > 0) {
                 if (!importedPrompts[profile.activePromptDayId]) profile.activePromptDayId = ids[0];
