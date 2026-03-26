@@ -131,13 +131,24 @@ export function renderStyles() {
         if (!confirm('Importing styles will overwrite your current styles. Continue?')) return;
         try {
             const importedStyles = await importData();
-            if (!Array.isArray(importedStyles) || !importedStyles.every(s => 'style' in s && 'description' in s)) {
-                throw new Error('Invalid styles file format.');
+            if (!Array.isArray(importedStyles)) {
+                throw new Error('Invalid styles file format. Expected a JSON array.');
             }
-            profile.styles = importedStyles;
+            // Accept either [{style, description}] objects or plain strings
+            const normalized = importedStyles.map(s => {
+                if (typeof s === 'string') {
+                    const id = s.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '');
+                    return { style: id, description: s };
+                }
+                if (typeof s === 'object' && s !== null && 'style' in s && 'description' in s) {
+                    return s;
+                }
+                throw new Error(`Invalid entry: ${JSON.stringify(s)}`);
+            });
+            profile.styles = normalized;
             await saveProfile(profile);
             renderStyles();
-            alert('Styles imported successfully!');
+            alert(`Imported ${normalized.length} styles successfully!`);
         } catch (err) {
             alert('Error importing styles: ' + err.message);
             console.error('Import styles error:', err);
