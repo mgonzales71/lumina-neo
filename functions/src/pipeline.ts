@@ -1,5 +1,5 @@
 import { Env, ProfileSettings, POIEntry, PromptVariables } from './types';
-import { renderPrompt, reverseGeocode, getWeather, resolveTheme } from './utils';
+import { renderPrompt, reverseGeocode, getWeather, getMoonData, resolveTheme } from './utils';
 
 export interface PipelineParams {
     userId: string;
@@ -46,16 +46,18 @@ export async function generateImagePipeline(env: Env, params: PipelineParams): P
     const poiKey = `POI:${locationId}`;
     let pois = await env.KV_POI.get<POIEntry[]>(poiKey, 'json');
     if (!pois || pois.length === 0) {
+        // Fallback or trigger population (simplified for now)
         pois = [
-            { name: 'Local Park', description: 'A green space with trees.' },
-            { name: 'City Center', description: 'Busy streets with shops.' }
+            { name: 'Local Landmark', description: 'A significant local site.' }
         ];
-        await env.KV_POI.put(poiKey, JSON.stringify(pois));
     }
     const selectedPOI = pois[Math.floor(Math.random() * pois.length)];
 
-    // 4. Weather
-    const weather = await getWeather(lat, lon);
+    // 4. Weather & Moon
+    const [weather, moon] = await Promise.all([
+        getWeather(lat, lon),
+        getMoonData(lat, lon)
+    ]);
 
     // 5. Theme & Style
     const theme = resolveTheme(profile.themes || []);
@@ -71,13 +73,33 @@ export async function generateImagePipeline(env: Env, params: PipelineParams): P
         city: geo.city,
         state_region: geo.state,
         country: geo.country,
-        weather: weather.description,
-        temperature_f: weather.tempF,
-        time: now.toLocaleTimeString(),
+        geography_context: {
+            urbanicity: 'urban',
+            terrain: 'flat',
+            coast: 'inland',
+            near_water: false
+        },
+        iso_datetime: now.toISOString(),
         date: now.toLocaleDateString(),
+        time: now.toLocaleTimeString(),
         day_of_week: now.toLocaleDateString('en-US', { weekday: 'long' }),
         is_weekend: [0, 6].includes(now.getDay()),
         time_of_day_simple,
+        time_of_day_bucket: 'afternoon', // Simplified
+        weather: weather.description,
+        precipitation_chance: weather.precip,
+        temperature_f: weather.tempF,
+        wind_speed_mph: weather.windSpeed,
+        visibility_mi: weather.visibility,
+        cloud_cover_pct: weather.cloudCover,
+        uv_index: weather.uvIndex,
+        sun_strength: weather.uvIndex > 5 ? 'high' : 'medium',
+        sunrise: weather.sunrise,
+        sunset: weather.sunset,
+        moon_phase: moon.moonPhase,
+        moon_illumination_pct: moon.moonIllumination,
+        moonrise: moon.moonrise,
+        moonset: moon.moonset,
         poi_name: selectedPOI.name,
         poi_desc: selectedPOI.description,
         theme,
@@ -121,6 +143,7 @@ export async function generateImagePipeline(env: Env, params: PipelineParams): P
         const encodedPrompt = encodeURIComponent(finalPrompt);
         imageUrl = `https://image.pollinations.ai/prompt/${encodedPrompt}?width=${width}&height=${height}&model=${model}&seed=${seed}&nologo=true`;
     } else {
+        // Generic POST logic could go here
         imageUrl = 'https://via.placeholder.com/1024x1024?text=Other+Provider';
     }
 

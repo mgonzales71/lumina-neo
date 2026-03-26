@@ -7,7 +7,7 @@ export const PROVIDER_REGISTRY: ProviderRegistry = {
     docsUrl: 'https://github.com/pollinations/pollinations',
     apiKeyUrl: '',
     auth: {
-      type: 'bearer', // Not used for Pollinations usually, but fitting the schema
+      type: 'bearer',
       headerName: 'Authorization',
       format: 'Bearer {API_KEY}'
     },
@@ -27,13 +27,13 @@ export const PROVIDER_REGISTRY: ProviderRegistry = {
       text: {
         enabled: true,
         generate: {
-          method: 'POST', // Pollinations text is usually POST
-          url: 'https://text.pollinations.ai/',
+          method: 'POST',
+          url: 'https://gen.pollinations.ai/v1/chat/completions',
           contentType: 'application/json',
           promptLocation: 'body'
         },
         fields: [
-            { key: 'model', type: 'select', options: ['openai', 'mistral', 'karma'], optional: false }
+            { key: 'model', type: 'select', options: ['openai', 'mistral', 'karma', 'unity', 'midijourney', 'rtist'], optional: false }
         ]
       }
     }
@@ -50,7 +50,7 @@ export const PROVIDER_REGISTRY: ProviderRegistry = {
     },
     categories: {
       image: {
-        enabled: false, // Can be enabled if user provides key
+        enabled: false,
         generate: {
           method: 'POST',
           url: 'https://openrouter.ai/api/v1/chat/completions',
@@ -58,7 +58,7 @@ export const PROVIDER_REGISTRY: ProviderRegistry = {
           promptLocation: 'body'
         },
         fields: [
-          { key: 'model', type: 'text', optional: false } // e.g. "stabilityai/stable-diffusion-xl-beta-v2-2-2"
+          { key: 'model', type: 'text', optional: false }
         ]
       },
       text: {

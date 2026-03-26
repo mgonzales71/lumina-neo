@@ -70,8 +70,18 @@ function createDefaultProfile(id: string): ProfileSettings {
     providerSettings: {
       activeProvider: 'pollinations',
       providers: {
-        pollinations: { enabled: true, apiKey: '' },
-        openrouter: { enabled: false, apiKey: '' }
+        pollinations: { 
+          enabled: true, 
+          apiKey: '',
+          image: { selectedModel: 'flux', defaults: {} },
+          text: { selectedModel: 'openai', defaults: {} }
+        },
+        openrouter: { 
+          enabled: false, 
+          apiKey: '',
+          image: { selectedModel: '', defaults: {} },
+          text: { selectedModel: '', defaults: {} }
+        }
       }
     }
   };
@@ -226,10 +236,10 @@ async function handleSanitizeLocation(request: Request, env: Env): Promise<Respo
 
 async function handlePopulatePOI(request: Request, env: Env): Promise<Response> {
     const body = await request.json() as any;
-    const { locationId, refresh, maxItems } = body;
+    const { userId, passkey, profileId, locationId, city, state, country, maxItems, refresh } = body;
 
-    if (!locationId) {
-        return errorResponse('INVALID_INPUT', 'Missing locationId');
+    if (!locationId || !userId || !profileId) {
+        return errorResponse('INVALID_INPUT', 'Missing required fields');
     }
 
     const key = `POI:${locationId}`;
@@ -241,15 +251,59 @@ async function handlePopulatePOI(request: Request, env: Env): Promise<Response> 
         }
     }
 
-    const mockPOIs: POIEntry[] = [
-        { name: 'Central Park', description: 'A large public park in the middle of Manhattan.' },
-        { name: 'Empire State Building', description: 'A 102-story Art Deco skyscraper.' },
-        { name: 'Statue of Liberty', description: 'A colossal neoclassical sculpture on Liberty Island.' }
-    ];
+    // Load Profile for Provider Settings
+    const profKey = `PROF:${userId}:${profileId}`;
+    const profile = await env.KV_PROFILES.get<ProfileSettings>(profKey, 'json');
+    if (!profile) return errorResponse('NOT_FOUND', 'Profile not found');
 
-    await env.KV_POI.put(key, JSON.stringify(mockPOIs));
+    const providerId = profile.providerSettings.activeProvider;
+    const providerCfg = profile.providerSettings.providers[providerId];
+    const registry = PROVIDER_REGISTRY[providerId];
 
-    return jsonResponse({ ok: true, data: mockPOIs });
+    if (!providerCfg || !providerCfg.enabled || !registry || !registry.categories.text) {
+        return errorResponse('CONFIG_ERROR', 'Text provider not configured or enabled');
+    }
+
+    const model = providerCfg.text?.selectedModel || 'openai';
+    const systemPrompt = "You are a travel assistant. Return a JSON array of interesting landmarks or points of interest for the given location. Each object MUST have 'name' and 'description' (1-2 sentences). NO OTHER TEXT. MAX " + (maxItems || 10) + " items.";
+    const userPrompt = `Location: ${city}, ${state}, ${country}`;
+
+    try {
+        const response = await fetch(registry.categories.text.generate.url!, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${providerCfg.apiKey}`
+            },
+            body: JSON.stringify({
+                model: model,
+                messages: [
+                    { role: 'system', content: systemPrompt },
+                    { role: 'user', content: userPrompt }
+                ]
+            })
+        });
+
+        const result = await response.json() as any;
+        let pois: POIEntry[] = [];
+        
+        // Parse OpenAI-style response
+        const content = result.choices?.[0]?.message?.content || '[]';
+        // Clean up potential markdown code blocks
+        const cleaned = content.replace(/```json/g, '').replace(/```/g, '').trim();
+        pois = JSON.parse(cleaned);
+
+        if (Array.isArray(pois) && pois.length > 0) {
+            await env.KV_POI.put(key, JSON.stringify(pois));
+            return jsonResponse({ ok: true, data: pois });
+        }
+        
+        throw new Error('No POIs returned from AI');
+
+    } catch (err: any) {
+        console.error('POI AI failed:', err);
+        return errorResponse('GENERATION_FAILED', 'Failed to generate POIs: ' + err.message);
+    }
 }
 
 async function handleSavePOI(request: Request, env: Env): Promise<Response> {
