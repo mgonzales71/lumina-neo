@@ -169,9 +169,15 @@ export function renderPrompts() {
                 throw new Error('Invalid prompts file format. Expected an object with prompt objects.');
             }
             profile.prompts = importedPrompts;
+            // If active day/night prompts no longer exist, default to first available
+            const ids = Object.keys(importedPrompts);
+            if (ids.length > 0) {
+                if (!importedPrompts[profile.activePromptDayId]) profile.activePromptDayId = ids[0];
+                if (!importedPrompts[profile.activePromptNightId]) profile.activePromptNightId = ids[0];
+            }
             await saveProfile(profile);
             renderPrompts();
-            alert('Prompts imported successfully!');
+            alert(`Imported ${ids.length} prompts successfully!`);
         } catch (err) {
             alert('Error importing prompts: ' + err.message);
             console.error('Import prompts error:', err);
