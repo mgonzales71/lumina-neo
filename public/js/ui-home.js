@@ -69,7 +69,13 @@ export async function renderHome() {
             </div>
             
             <button id="generate-btn" class="btn" style="font-size: 1.2rem; padding: 1rem 2rem;">Generate New Image</button>
-            
+
+            <div id="image-actions" style="display: ${lastImg ? 'flex' : 'none'}; gap: 10px; justify-content: center; flex-wrap: wrap; margin-top: 1rem;">
+                <button id="save-image-btn" class="btn btn-secondary">Save Image</button>
+                <button id="view-image-btn" class="btn btn-secondary">View Full</button>
+                <button id="wallpaper-btn" class="btn btn-secondary">Set Wallpaper</button>
+            </div>
+
             <div style="margin-top: 1rem;">
                 <button id="toggle-debug-btn" class="btn btn-secondary btn-sm">${lastDebug ? 'Show Details' : 'No Details'}</button>
             </div>
@@ -84,6 +90,13 @@ export async function renderHome() {
     `;
     
     document.getElementById('generate-btn').addEventListener('click', handleGenerate);
+
+    document.getElementById('save-image-btn')?.addEventListener('click', () => saveImage(AppState.lastGenerated?.imageUrl));
+    document.getElementById('view-image-btn')?.addEventListener('click', () => {
+        const url = AppState.lastGenerated?.imageUrl;
+        if (url) window.open(url, '_blank');
+    });
+    document.getElementById('wallpaper-btn')?.addEventListener('click', () => setWallpaper(AppState.lastGenerated?.imageUrl));
     
     const debugPanel = document.getElementById('debug-panel');
     const toggleDebugBtn = document.getElementById('toggle-debug-btn');
@@ -134,6 +147,39 @@ export async function renderHome() {
         }
     `;
     document.head.appendChild(style);
+}
+
+async function saveImage(url) {
+    if (!url) return;
+    try {
+        // Fetch image as blob so we can share/download it directly
+        const res = await fetch(url);
+        const blob = await res.blob();
+        const file = new File([blob], 'lumina-neo.jpg', { type: blob.type || 'image/jpeg' });
+
+        // Use Web Share API on iOS (allows Save to Photos)
+        if (navigator.canShare && navigator.canShare({ files: [file] })) {
+            await navigator.share({ files: [file], title: 'Lumina Neo' });
+        } else {
+            // Desktop fallback: trigger download
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = 'lumina-neo.jpg';
+            a.click();
+            URL.revokeObjectURL(a.href);
+        }
+    } catch (err) {
+        if (err.name !== 'AbortError') alert('Save failed: ' + err.message);
+    }
+}
+
+function setWallpaper(url) {
+    if (!url) return;
+    // Triggers the iOS Shortcut named "Set Wallpaper" passing the image URL as input.
+    // Create a Shortcut on your iPhone: receive input as text → Get Contents of URL → Set Wallpaper Photo
+    const shortcutName = encodeURIComponent('Set Wallpaper');
+    const encoded = encodeURIComponent(url);
+    window.location.href = `shortcuts://run-shortcut?name=${shortcutName}&input=text&text=${encoded}`;
 }
 
 function formatDebug(debug) {
@@ -235,6 +281,11 @@ async function handleGenerate() {
             
             AppState.lastGenerated = response;
             AppState.save();
+
+            document.getElementById('image-actions').style.display = 'flex';
+            document.getElementById('save-image-btn').onclick = () => saveImage(response.imageUrl);
+            document.getElementById('view-image-btn').onclick = () => window.open(response.imageUrl, '_blank');
+            document.getElementById('wallpaper-btn').onclick = () => setWallpaper(response.imageUrl);
 
         } catch (err) {
             console.error(err);
