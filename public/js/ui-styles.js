@@ -19,22 +19,36 @@ export function renderStyles() {
             </div>
             <ul id="style-list" style="list-style: none; padding: 0;">
                 ${profile.styles.length === 0 ? '<p style="text-align:center; padding: 20px; opacity: 0.6;">No styles added yet.</p>' : ''}
-                ${profile.styles.map((s, index) => `
-                    <li style="background: rgba(255,255,255,0.05); border-radius: 12px; padding: 15px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: start; border: 1px solid var(--glass-border); ${s.style === profile.activeStyleId ? 'border-color: var(--primary);' : ''}">
-                        <div>
-                            <div style="font-size: 1.1rem; font-weight: 600;">
-                                ${s.style}
-                                ${s.style === profile.activeStyleId ? '<span style="font-size:0.8em; color:var(--primary); margin-left:6px;">✓ Active</span>' : ''}
-                            </div>
-                            <p style="font-size: 0.9rem; color: var(--text-secondary); margin: 0;">${s.description}</p>
+                ${profile.styles.map((s, index) => {
+                    const isActive = s.style === profile.activeStyleId;
+                    return `
+                    <li style="background: rgba(255,255,255,0.05); border-radius: 12px; padding: 14px 14px 14px 12px; margin-bottom: 10px; display: flex; align-items: center; gap: 12px; border: 1px solid ${isActive ? 'var(--primary)' : 'var(--glass-border)'};">
+                        <!-- Active circle toggle -->
+                        <button class="set-active-style-btn" data-index="${index}" title="${isActive ? 'Active' : 'Set Active'}" style="
+                            flex-shrink: 0;
+                            width: 28px; height: 28px; border-radius: 50%;
+                            border: 2px solid ${isActive ? 'var(--primary)' : 'rgba(255,255,255,0.25)'};
+                            background: ${isActive ? 'var(--primary)' : 'transparent'};
+                            display: flex; align-items: center; justify-content: center;
+                            cursor: ${isActive ? 'default' : 'pointer'};
+                            transition: all 0.2s; padding: 0;
+                        ">
+                            ${isActive ? `<svg width="14" height="14" viewBox="0 0 14 14" fill="none"><polyline points="2,7 5.5,10.5 12,3.5" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>` : ''}
+                        </button>
+                        <!-- Name + description -->
+                        <div style="flex:1; min-width:0;">
+                            <div style="font-size: 1rem; font-weight: 600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${s.style}</div>
+                            <div style="font-size: 0.85rem; color: var(--text-secondary); margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${s.description}</div>
                         </div>
-                        <div style="display:flex; gap: 8px; flex-shrink:0; margin-left: 10px;">
-                            ${s.style !== profile.activeStyleId ? `<button class="btn btn-sm set-active-style-btn" data-index="${index}" style="padding: 8px 12px; font-size: 0.85rem;">Set Active</button>` : ''}
-                            <button class="btn btn-secondary btn-sm edit-style-btn" data-index="${index}" style="padding: 8px 12px; font-size: 0.85rem;">Edit</button>
-                            <button class="btn btn-danger btn-sm delete-style-btn" data-index="${index}" style="padding: 8px 12px; font-size: 0.85rem;">Delete</button>
+                        <!-- Edit + Delete -->
+                        <div style="display:flex; gap:8px; flex-shrink:0;">
+                            <button class="btn btn-secondary btn-sm edit-style-btn" data-index="${index}" title="Edit" style="padding:8px 10px; font-size:1rem; line-height:1;">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                            </button>
+                            <button class="btn btn-danger btn-sm delete-style-btn" data-index="${index}" title="Delete" style="padding:8px 10px; font-size:0.95rem; line-height:1;">&times;</button>
                         </div>
-                    </li>
-                `).join('')}
+                    </li>`;
+                }).join('')}
             </ul>
         </div>
 
@@ -60,7 +74,8 @@ export function renderStyles() {
     // Event Listeners
     document.querySelectorAll('.set-active-style-btn').forEach(btn => {
         btn.addEventListener('click', async (e) => {
-            const index = parseInt(e.target.dataset.index);
+            const index = parseInt(e.currentTarget.dataset.index);
+            if (profile.styles[index].style === profile.activeStyleId) return;
             profile.activeStyleId = profile.styles[index].style;
             await saveProfile(profile);
             renderStyles();
