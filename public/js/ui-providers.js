@@ -156,39 +156,61 @@ function renderCategoryConfig(providerId, categoryName, def, userConf, dynamicMo
     // Other Fields
     const nonModelFields = def.fields.filter(f => f.key !== 'model');
     if (nonModelFields.length > 0) {
-        html += `<details style="margin-top:4px;"><summary style="cursor:pointer; font-size:0.85rem; opacity:0.7; margin-bottom:10px; user-select:none;">Advanced Options</summary><div style="padding-top:10px;">`;
+        html += `<div style="margin-top:12px; padding-top:12px; border-top:0.5px solid var(--glass-border);">
+            <div style="font-size:0.75rem; text-transform:uppercase; letter-spacing:0.08em; opacity:0.5; margin-bottom:12px;">Advanced Options</div>`;
+
         nonModelFields.forEach(field => {
             const val = userConf.defaults[field.key] !== undefined ? userConf.defaults[field.key] : '';
             const label = field.key.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+
             if (field.type === 'boolean') {
-                // No outer <label> — use id/for to avoid cross-activation between sibling checkboxes
-                const inputId = `chk-${providerId}-${categoryName}-${field.key}`;
-                const checked = val === true || val === 'true';
-                html += `<div class="form-group" style="flex-direction:row; align-items:center; gap:10px; padding:4px 0;">
-                    <input type="checkbox" id="${inputId}" class="config-default-field" data-provider="${providerId}" data-category="${categoryName}" data-key="${field.key}" ${checked ? 'checked' : ''} style="width:18px; height:18px; cursor:pointer; flex-shrink:0; accent-color:var(--primary);">
-                    <label for="${inputId}" style="cursor:pointer; font-size:0.9rem; margin:0; font-weight:normal; opacity:0.9;">${label}</label>
+                const active = val === true || val === 'true';
+                html += `<div style="display:flex; justify-content:space-between; align-items:center; padding:6px 0;">
+                    <span style="font-size:0.9rem; opacity:0.85;">${label}</span>
+                    <button class="toggle-btn ${active ? 'toggle-on' : ''}" data-provider="${providerId}" data-category="${categoryName}" data-key="${field.key}" style="
+                        min-width:58px; padding:5px 12px; border-radius:20px; font-size:0.8rem; font-weight:600;
+                        border:1.5px solid ${active ? 'var(--primary)' : 'var(--glass-border)'};
+                        background:${active ? 'rgba(var(--primary-rgb),0.2)' : 'rgba(255,255,255,0.05)'};
+                        color:${active ? 'var(--primary)' : 'var(--text-secondary)'};
+                        cursor:pointer; transition:all 0.2s;
+                    ">${active ? 'ON' : 'OFF'}</button>
                 </div>`;
+            } else if (field.type === 'select') {
+                html += `<div class="form-group"><label>${label}</label>
+                    <select class="config-default-field" data-provider="${providerId}" data-category="${categoryName}" data-key="${field.key}">`;
+                field.options.forEach(opt => {
+                    html += `<option value="${opt}" ${val == opt ? 'selected' : ''}>${opt}</option>`;
+                });
+                html += `</select></div>`;
             } else {
-                html += `<div class="form-group"><label>${label}</label>`;
-                if (field.type === 'select') {
-                    html += `<select class="config-default-field" data-provider="${providerId}" data-category="${categoryName}" data-key="${field.key}">`;
-                    field.options.forEach(opt => {
-                        html += `<option value="${opt}" ${val == opt ? 'selected' : ''}>${opt}</option>`;
-                    });
-                    html += `</select>`;
-                } else {
-                    html += `<input type="${field.type === 'number' ? 'number' : 'text'}" class="config-default-field" data-provider="${providerId}" data-category="${categoryName}" data-key="${field.key}" value="${val}" placeholder="${field.key === 'negative_prompt' ? 'worst quality, blurry' : ''}">`;
-                }
-                html += `</div>`;
+                html += `<div class="form-group"><label>${label}</label>
+                    <input type="${field.type === 'number' ? 'number' : 'text'}" class="config-default-field" data-provider="${providerId}" data-category="${categoryName}" data-key="${field.key}" value="${val}" placeholder="${field.key === 'negative_prompt' ? 'worst quality, blurry' : ''}">
+                </div>`;
             }
         });
-        html += `</div></details>`;
+        html += `</div>`;
     }
 
     return html;
 }
 
 function bindDynamicListeners(settings) {
+    document.querySelectorAll('.toggle-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const { provider, category, key } = e.target.dataset;
+            if (!settings.providers[provider][category]) settings.providers[provider][category] = { selectedModel: '', defaults: {} };
+            if (!settings.providers[provider][category].defaults) settings.providers[provider][category].defaults = {};
+            const newVal = !settings.providers[provider][category].defaults[key];
+            settings.providers[provider][category].defaults[key] = newVal;
+            // Update button appearance immediately
+            e.target.classList.toggle('toggle-on', newVal);
+            e.target.textContent = newVal ? 'ON' : 'OFF';
+            e.target.style.border = `1.5px solid ${newVal ? 'var(--primary)' : 'var(--glass-border)'}`;
+            e.target.style.background = newVal ? 'rgba(var(--primary-rgb),0.2)' : 'rgba(255,255,255,0.05)';
+            e.target.style.color = newVal ? 'var(--primary)' : 'var(--text-secondary)';
+        });
+    });
+
     document.querySelectorAll('.config-field').forEach(input => {
         input.addEventListener('change', (e) => {
             const { provider, category, key } = e.target.dataset;
