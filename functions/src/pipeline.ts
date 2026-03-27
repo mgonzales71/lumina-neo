@@ -193,7 +193,9 @@ export async function generateImagePipeline(env: Env, params: PipelineParams): P
 
     if (providerId === 'pollinations') {
         const encodedPrompt = encodeURIComponent(finalPrompt);
-        imageUrl = `https://gen.pollinations.ai/image/${encodedPrompt}?width=${width}&height=${height}&model=${model}&seed=${seed}&nologo=true`;
+        const apiKey = providerSettings.apiKey || '';
+        const keyParam = apiKey ? `&key=${encodeURIComponent(apiKey)}` : '';
+        imageUrl = `https://gen.pollinations.ai/image/${encodedPrompt}?width=${width}&height=${height}&model=${model}&seed=${seed}&nologo=true${keyParam}`;
     } else {
         imageUrl = 'https://via.placeholder.com/1024x1024?text=Other+Provider';
     }
