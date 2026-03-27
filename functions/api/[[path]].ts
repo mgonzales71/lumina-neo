@@ -176,6 +176,12 @@ export const onRequest: PagesFunction<Env> = async (context) => {
     if (url.pathname === '/api/profile/delete' && method === 'DELETE') {
       return await handleDeleteProfile(request, env);
     }
+    if (url.pathname === '/api/cache/check' && method === 'GET') {
+      return await handleCacheCheck(request, env);
+    }
+    if (url.pathname === '/api/cache/warm' && method === 'POST') {
+      return await handleCacheWarm(request, env);
+    }
     if (url.pathname === '/api/generate-image' && method === 'POST') {
       return await handleGenerateImage(request, env);
     }
@@ -513,6 +519,121 @@ async function handleSanitizePOIEntry(request: Request, env: Env): Promise<Respo
 
     } catch (err: any) {
         return errorResponse('GENERATION_FAILED', 'Failed to sanitize POI: ' + err.message);
+    }
+}
+
+async function handleCacheCheck(request: Request, env: Env): Promise<Response> {
+    const url = new URL(request.url);
+    const lat  = parseFloat(url.searchParams.get('lat') || '');
+    const lon  = parseFloat(url.searchParams.get('lon') || '');
+
+    if (isNaN(lat) || isNaN(lon)) {
+        return errorResponse('INVALID_INPUT', 'lat and lon query params required');
+    }
+
+    const geo = await reverseGeocode(lat, lon);
+    const locationId = `${geo.city}-${geo.state}-${geo.country}`.toLowerCase().replace(/[^a-z0-9]/g, '-');
+    const pois = await env.KV_POI.get<POIEntry[]>(`POI:${locationId}`, 'json');
+    const cached = Array.isArray(pois) && pois.length > 0;
+
+    return jsonResponse({ ok: true, data: {
+        cached,
+        locationId,
+        city: geo.city,
+        state: geo.state,
+        country: geo.country,
+        poiCount: cached ? pois!.length : 0
+    }});
+}
+
+async function handleCacheWarm(request: Request, env: Env): Promise<Response> {
+    const body = await request.json() as any;
+    const { userId, passkey, profileId, lat, lon } = body;
+
+    if (!userId || !passkey || !profileId || lat == null || lon == null) {
+        return errorResponse('INVALID_INPUT', 'userId, passkey, profileId, lat, lon required');
+    }
+
+    try {
+        await authenticateUser(env, userId, passkey);
+    } catch {
+        return errorResponse('AUTH_FAILED', 'Invalid credentials', {}, 401);
+    }
+
+    const geo = await reverseGeocode(lat, lon);
+    const locationId = `${geo.city}-${geo.state}-${geo.country}`.toLowerCase().replace(/[^a-z0-9]/g, '-');
+    const poiKey = `POI:${locationId}`;
+
+    // Already cached — nothing to do
+    const existing = await env.KV_POI.get<POIEntry[]>(poiKey, 'json');
+    if (Array.isArray(existing) && existing.length > 0) {
+        return jsonResponse({ ok: true, data: {
+            cached: true,
+            locationId,
+            city: geo.city,
+            state: geo.state,
+            country: geo.country,
+            poiCount: existing.length,
+            waitSeconds: 0
+        }});
+    }
+
+    // Not cached — generate now (blocks until done)
+    const profKey = `PROF:${userId}:${profileId}`;
+    const profile = await env.KV_PROFILES.get<ProfileSettings>(profKey, 'json');
+    if (!profile) return errorResponse('NOT_FOUND', 'Profile not found');
+
+    const providerId = profile.providerSettings.activeProvider;
+    const providerCfg = profile.providerSettings.providers[providerId];
+    const registry = PROVIDER_REGISTRY[providerId];
+
+    if (!providerCfg?.enabled || !registry?.categories.text) {
+        return errorResponse('CONFIG_ERROR', 'Text provider not configured or enabled');
+    }
+
+    const model = providerCfg.text?.selectedModel || 'openai';
+    const isUS = geo.country === 'United States' || geo.country === 'US' || geo.country === 'USA';
+    const locationStr = isUS
+        ? `the city of ${geo.city} in the state of ${geo.state}`
+        : [geo.city, geo.state, geo.country].filter(Boolean).join(', ');
+
+    const systemPrompt = 'You are an expert on points of interest and other unique and notable places of things views or vistas of requested locations. Do not cite sources or any additional information beyond returning one item per line with no formatting.';
+    const userPrompt = `Task: Generate a list of up to 30 visually unique points of interest, landmarks, or vistas in or nearby ${locationStr}. Format Rules: 1. Output ONLY a raw JSON array of objects. 2. Do NOT include markdown code blocks (no backticks). 3. Do NOT include any introductory or concluding text. 4. Each object must have exactly two keys: "name" and "description". 5. "description" must be 1-2, concise sentences that visually describes the named point of interest.`;
+
+    try {
+        const aiResponse = await fetch(registry.categories.text.generate.url!, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${providerCfg.apiKey}` },
+            body: JSON.stringify({ model, messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: userPrompt }] })
+        });
+
+        const result = await aiResponse.json() as any;
+        const content = result.choices?.[0]?.message?.content || '[]';
+        const start = content.indexOf('['), end = content.lastIndexOf(']');
+        if (start === -1 || end < start) throw new Error('No JSON array in AI response');
+
+        const pois: POIEntry[] = JSON.parse(
+            content.slice(start, end + 1)
+                .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '')
+                .replace(/\r?\n|\r/g, ' ')
+                .replace(/\t/g, ' ')
+        );
+
+        if (!Array.isArray(pois) || pois.length === 0) throw new Error('Empty POI list');
+        await env.KV_POI.put(poiKey, JSON.stringify(pois));
+
+        return jsonResponse({ ok: true, data: {
+            cached: false,
+            locationId,
+            city: geo.city,
+            state: geo.state,
+            country: geo.country,
+            poiCount: pois.length,
+            waitSeconds: 0  // generation complete — safe to call /generate-image immediately
+        }});
+
+    } catch (err: any) {
+        return errorResponse('GENERATION_FAILED', 'Failed to warm POI cache: ' + err.message);
     }
 }
 
