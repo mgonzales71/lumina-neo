@@ -1,5 +1,5 @@
 /* ============================================================
-   Lumina Neo — Liquid Glass UI  v1.6.3
+   Lumina Neo — Liquid Glass UI  v1.6.4
    Inspired by GlassKit (glasskit.jungherz.com)
    Aurora background system + theme/color picker
    ============================================================ */
@@ -683,12 +683,115 @@ code, .code-snippet {
     display: none;
     align-items: center;
     justify-content: center;
+    overflow: hidden;
+    border-radius: inherit;
+}
+.loading-overlay.active { display: flex; }
+
+/* Aurora blobs inside the overlay — palette-colored */
+.gen-aurora {
+    position: absolute;
+    border-radius: 50%;
+    pointer-events: none;
+}
+.gen-aurora-1 {
+    width: 90%; height: 90%;
+    background: radial-gradient(circle, var(--au-1), transparent 65%);
+    top: -20%; left: -20%;
+    filter: blur(28px);
+    animation: gen-float-1 2.8s ease-in-out infinite alternate;
+}
+.gen-aurora-2 {
+    width: 78%; height: 78%;
+    background: radial-gradient(circle, var(--au-2), transparent 65%);
+    bottom: -18%; right: -18%;
+    filter: blur(24px);
+    animation: gen-float-2 3.4s ease-in-out infinite alternate;
+}
+.gen-aurora-3 {
+    width: 62%; height: 62%;
+    background: radial-gradient(circle, var(--au-3), transparent 65%);
+    top: 22%; left: 28%;
+    filter: blur(18px);
+    animation: gen-float-3 2.3s ease-in-out infinite alternate;
+    animation-delay: -1.2s;
+}
+@keyframes gen-float-1 {
+    from { transform: translate(0,   0)   scale(1);    }
+    to   { transform: translate(22%, 18%) scale(1.28); }
+}
+@keyframes gen-float-2 {
+    from { transform: translate(0,    0)    scale(1);    }
+    to   { transform: translate(-18%,-22%) scale(1.22); }
+}
+@keyframes gen-float-3 {
+    from { transform: translate(0,  0)   scale(0.88); opacity: 0.7; }
+    to   { transform: translate(10%,-14%) scale(1.18); opacity: 1;   }
+}
+
+/* Spinner + label above the blobs */
+.gen-content {
+    position: relative;
+    z-index: 1;
+    display: flex;
     flex-direction: column;
+    align-items: center;
     gap: 8px;
     font-size: 0.85rem;
-    color: var(--text-2);
+    color: var(--text-1);
+    text-shadow: 0 1px 8px rgba(0,0,0,0.4);
 }
-.home-generate-btn  { width:100%; padding:13px; font-size:0.97rem; border-radius:var(--r-lg); letter-spacing:0.01em; }
+.home-generate-btn {
+    width: 100%;
+    padding: 13px;
+    font-size: 0.97rem;
+    border-radius: var(--r-lg);
+    letter-spacing: 0.01em;
+    position: relative;
+    overflow: hidden;
+}
+
+/* Progress bar — grows along the button bottom during generation */
+.btn-progress-bar {
+    position: absolute;
+    bottom: 0; left: 0;
+    height: 3px;
+    width: 0%;
+    background: rgba(255, 255, 255, 0.72);
+    border-radius: 0 0 var(--r-lg) var(--r-lg);
+    pointer-events: none;
+}
+.home-generate-btn.generating .btn-progress-bar {
+    animation: progress-fill 24s cubic-bezier(0.06, 0.9, 0.28, 1) forwards;
+}
+@keyframes progress-fill {
+    0%  { width: 0%; }
+    20% { width: 42%; }
+    50% { width: 63%; }
+    80% { width: 78%; }
+    100%{ width: 88%; }
+}
+
+/* Shimmer sweep while generating */
+.home-generate-btn.generating::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(105deg,
+        transparent 30%,
+        rgba(255, 255, 255, 0.16) 50%,
+        transparent 70%
+    );
+    background-size: 250% 100%;
+    animation: btn-shimmer 1.8s ease-in-out infinite;
+    pointer-events: none;
+    border-radius: inherit;
+}
+@keyframes btn-shimmer {
+    0%   { background-position: 250% center; }
+    100% { background-position: -100% center; }
+}
+
 .image-actions      { display:flex; gap:8px; margin-top:10px; }
 .image-actions .btn { flex:1; font-size:0.8rem; padding:9px 6px; }
 .debug-toggle-row   { margin-top:10px; display:flex; justify-content:center; }

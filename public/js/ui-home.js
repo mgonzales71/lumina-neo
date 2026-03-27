@@ -1,6 +1,8 @@
 import { AppState } from './state.js';
 import { fetchApi } from './api.js';
 
+let currentAbortController = null;
+
 export async function renderHome() {
     const container = document.getElementById('home-tab');
     const profile = AppState.currentProfile;
@@ -36,15 +38,23 @@ export async function renderHome() {
                        </div>`
                 }
                 <div id="loading-overlay" class="loading-overlay">
-                    <svg class="spinner" width="28" height="28" viewBox="0 0 66 66" xmlns="http://www.w3.org/2000/svg">
-                        <circle class="path" fill="none" stroke-width="6" stroke-linecap="round" cx="33" cy="33" r="30"/>
-                    </svg>
-                    <span>Generating…</span>
+                    <div class="gen-aurora gen-aurora-1"></div>
+                    <div class="gen-aurora gen-aurora-2"></div>
+                    <div class="gen-aurora gen-aurora-3"></div>
+                    <div class="gen-content">
+                        <svg class="spinner" width="28" height="28" viewBox="0 0 66 66" xmlns="http://www.w3.org/2000/svg">
+                            <circle class="path" fill="none" stroke-width="6" stroke-linecap="round" cx="33" cy="33" r="30"/>
+                        </svg>
+                        <span>Generating…</span>
+                    </div>
                 </div>
             </div>
 
-            <!-- Generate -->
-            <button id="generate-btn" class="btn home-generate-btn">Generate Image</button>
+            <!-- Generate / Cancel -->
+            <button id="generate-btn" class="btn home-generate-btn">
+                <span class="btn-label">Generate Image</span>
+                <span class="btn-progress-bar"></span>
+            </button>
 
             <!-- Post-generate actions -->
             <div id="image-actions" class="image-actions" style="display:${lastImg ? 'flex' : 'none'};">
@@ -92,23 +102,31 @@ export async function renderHome() {
 }
 
 async function handleGenerate() {
-    const btn        = document.getElementById('generate-btn');
-    const overlay    = document.getElementById('loading-overlay');
-    const imgContainer = document.getElementById('image-container');
-    const debugContent = document.getElementById('debug-content');
+    const btn            = document.getElementById('generate-btn');
+    const overlay        = document.getElementById('loading-overlay');
+    const imgContainer   = document.getElementById('image-container');
+    const debugContent   = document.getElementById('debug-content');
     const toggleDebugBtn = document.getElementById('toggle-debug-btn');
+    const btnLabel       = btn.querySelector('.btn-label');
 
-    btn.disabled = true;
-    // Clear previous image but keep loading overlay
+    // ── Cancel if already generating ──────────────────────────
+    if (currentAbortController) {
+        currentAbortController.abort();
+        return;
+    }
+
+    // ── Start generation ──────────────────────────────────────
+    currentAbortController = new AbortController();
+    btnLabel.textContent = '✕  Cancel';
+    btn.classList.add('generating');
     Array.from(imgContainer.children).forEach(c => { if (c.id !== 'loading-overlay') c.remove(); });
-    overlay.style.display = 'flex';
+    overlay.classList.add('active');
     toggleDebugBtn.textContent = 'No Details';
     toggleDebugBtn.disabled = true;
 
     if (!navigator.geolocation) {
         alert('Geolocation is not supported by your browser.');
-        btn.disabled = false;
-        overlay.style.display = 'none';
+        resetBtn(btn, btnLabel, overlay);
         return;
     }
 
@@ -144,7 +162,7 @@ async function handleGenerate() {
                 lat:        latitude,
                 lon:        longitude,
                 deviceSize: { width: targetWidth, height: targetHeight }
-            });
+            }, {}, currentAbortController.signal);
 
             // Insert generated image
             Array.from(imgContainer.children).forEach(c => { if (c.id !== 'loading-overlay') c.remove(); });
@@ -153,7 +171,7 @@ async function handleGenerate() {
             img.alt = 'Generated image';
             imgContainer.insertBefore(img, overlay);
 
-            // Show actions with fresh URLs
+            // Show actions
             const actions = document.getElementById('image-actions');
             actions.style.display = 'flex';
             document.getElementById('save-image-btn').onclick  = () => saveImage(response.imageUrl);
@@ -169,18 +187,25 @@ async function handleGenerate() {
             AppState.save();
 
         } catch (err) {
-            console.error(err);
-            alert('Generation failed: ' + err.message);
+            if (err.name !== 'AbortError') {
+                console.error(err);
+                alert('Generation failed: ' + err.message);
+            }
         } finally {
-            overlay.style.display = 'none';
-            btn.disabled = false;
+            resetBtn(btn, btnLabel, overlay);
         }
 
     }, (error) => {
         alert('Location access denied: ' + error.message);
-        btn.disabled = false;
-        overlay.style.display = 'none';
+        resetBtn(btn, btnLabel, overlay);
     }, { timeout: 10000 });
+}
+
+function resetBtn(btn, btnLabel, overlay) {
+    currentAbortController = null;
+    btnLabel.textContent = 'Generate Image';
+    btn.classList.remove('generating');
+    overlay.classList.remove('active');
 }
 
 async function saveImage(url) {

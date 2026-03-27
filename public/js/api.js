@@ -1,14 +1,15 @@
 const API_BASE_URL = '/api';
 
-export async function fetchApi(endpoint, method = 'GET', body = null, headers = {}) {
+export async function fetchApi(endpoint, method = 'GET', body = null, headers = {}, signal = null) {
     const url = `${API_BASE_URL}${endpoint}`;
-    
+
     const options = {
         method,
         headers: {
             'Content-Type': 'application/json',
             ...headers
-        }
+        },
+        ...(signal && { signal })
     };
 
     if (body) {
@@ -25,7 +26,7 @@ export async function fetchApi(endpoint, method = 'GET', body = null, headers = 
 
         return json.data;
     } catch (error) {
-        console.error('API Request Failed:', error);
+        if (error.name !== 'AbortError') console.error('API Request Failed:', error);
         throw error;
     }
 }
