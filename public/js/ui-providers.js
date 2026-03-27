@@ -81,7 +81,7 @@ export async function renderProviders() {
                         <div class="provider-info" style="background: rgba(0,0,0,0.2); padding: 12px; border-radius: 8px; margin-bottom: 15px; font-size: 0.9rem; line-height: 1.7;">
                             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
                                 <span><strong>${account.username}</strong> &nbsp;<span style="opacity:0.7; font-size:0.85em;">${account.tier}</span></span>
-                                <span style="font-weight:600; color:var(--primary-color);">${account.balance} Pollen</span>
+                                <span style="font-weight:600; color:var(--primary);">${account.balance} Pollen</span>
                             </div>
                             ${account.email ? `<div style="opacity:0.7; font-size:0.85em;">${account.email}</div>` : ''}
                             ${account.nextResetAt ? `<div style="opacity:0.6; font-size:0.8em;">Resets ${new Date(account.nextResetAt).toLocaleDateString(undefined, {month:'short', day:'numeric', year:'numeric'})}</div>` : ''}
@@ -154,20 +154,32 @@ function renderCategoryConfig(providerId, categoryName, def, userConf, dynamicMo
     }
 
     // Other Fields
-    def.fields.filter(f => f.key !== 'model').forEach(field => {
-        const val = userConf.defaults[field.key] !== undefined ? userConf.defaults[field.key] : '';
-        html += `<div class="form-group"><label>${field.key}</label>`;
-        if (field.type === 'select') {
-             html += `<select class="config-default-field" data-provider="${providerId}" data-category="${categoryName}" data-key="${field.key}">`;
-             field.options.forEach(opt => {
-                 html += `<option value="${opt}" ${val == opt ? 'selected' : ''}>${opt}</option>`;
-             });
-             html += `</select>`;
-        } else {
-            html += `<input type="${field.type === 'number' ? 'number' : 'text'}" class="config-default-field" data-provider="${providerId}" data-category="${categoryName}" data-key="${field.key}" value="${val}">`;
-        }
-        html += `</div>`;
-    });
+    const nonModelFields = def.fields.filter(f => f.key !== 'model');
+    if (nonModelFields.length > 0) {
+        html += `<details style="margin-top:4px;"><summary style="cursor:pointer; font-size:0.85rem; opacity:0.7; margin-bottom:10px; user-select:none;">Advanced Options</summary><div style="padding-top:10px;">`;
+        nonModelFields.forEach(field => {
+            const val = userConf.defaults[field.key] !== undefined ? userConf.defaults[field.key] : '';
+            const label = field.key.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+            html += `<div class="form-group"><label>${label}</label>`;
+            if (field.type === 'select') {
+                html += `<select class="config-default-field" data-provider="${providerId}" data-category="${categoryName}" data-key="${field.key}">`;
+                field.options.forEach(opt => {
+                    html += `<option value="${opt}" ${val == opt ? 'selected' : ''}>${opt}</option>`;
+                });
+                html += `</select>`;
+            } else if (field.type === 'boolean') {
+                const checked = val === true || val === 'true';
+                html += `<label style="display:flex; align-items:center; gap:10px; cursor:pointer;">
+                    <input type="checkbox" class="config-default-field" data-provider="${providerId}" data-category="${categoryName}" data-key="${field.key}" ${checked ? 'checked' : ''} style="width:18px; height:18px; cursor:pointer;">
+                    <span style="font-size:0.85rem; opacity:0.8;">${label}</span>
+                </label>`;
+            } else {
+                html += `<input type="${field.type === 'number' ? 'number' : 'text'}" class="config-default-field" data-provider="${providerId}" data-category="${categoryName}" data-key="${field.key}" value="${val}" placeholder="${field.key === 'negative_prompt' ? 'worst quality, blurry' : ''}">`;
+            }
+            html += `</div>`;
+        });
+        html += `</div></details>`;
+    }
 
     return html;
 }
@@ -186,7 +198,8 @@ function bindDynamicListeners(settings) {
             const { provider, category, key } = e.target.dataset;
             if (!settings.providers[provider][category]) settings.providers[provider][category] = { selectedModel: '', defaults: {} };
             if (!settings.providers[provider][category].defaults) settings.providers[provider][category].defaults = {};
-            settings.providers[provider][category].defaults[key] = e.target.value;
+            const value = e.target.type === 'checkbox' ? e.target.checked : e.target.value;
+            settings.providers[provider][category].defaults[key] = value;
         });
     });
 }

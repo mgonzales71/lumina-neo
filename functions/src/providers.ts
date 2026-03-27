@@ -2,7 +2,7 @@ import { ProviderRegistry } from './types';
 
 /**
  * Provider Registry
- * Version: v1.1.1
+ * Version: v1.2.0
  */
 export const PROVIDER_REGISTRY: ProviderRegistry = {
   pollinations: {
@@ -24,8 +24,13 @@ export const PROVIDER_REGISTRY: ProviderRegistry = {
           promptLocation: 'query'
         },
         fields: [
-          { key: 'model', type: 'select', options: ['flux', 'flux-realism', 'any-dark', 'turbo'], optional: false },
-          { key: 'seed', type: 'number', optional: true }
+          { key: 'model', type: 'select', options: ['flux', 'flux-realism', 'any-dark', 'turbo', 'gptimage', 'gptimage-large', 'zimage'], optional: false },
+          { key: 'seed', type: 'number', optional: true },
+          { key: 'enhance', type: 'boolean', optional: true },
+          { key: 'safe', type: 'boolean', optional: true },
+          { key: 'quality', type: 'select', options: ['low', 'medium', 'high', 'hd'], optional: true },
+          { key: 'transparent', type: 'boolean', optional: true },
+          { key: 'negative_prompt', type: 'text', optional: true }
         ]
       },
       text: {

@@ -20,11 +20,11 @@ export function renderStyles() {
             <ul id="style-list" style="list-style: none; padding: 0;">
                 ${profile.styles.length === 0 ? '<p style="text-align:center; padding: 20px; opacity: 0.6;">No styles added yet.</p>' : ''}
                 ${profile.styles.map((s, index) => `
-                    <li style="background: rgba(255,255,255,0.05); border-radius: 12px; padding: 15px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: start; border: 1px solid var(--glass-border); ${s.style === profile.activeStyleId ? 'border-color: var(--primary-color);' : ''}">
+                    <li style="background: rgba(255,255,255,0.05); border-radius: 12px; padding: 15px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: start; border: 1px solid var(--glass-border); ${s.style === profile.activeStyleId ? 'border-color: var(--primary);' : ''}">
                         <div>
                             <div style="font-size: 1.1rem; font-weight: 600;">
                                 ${s.style}
-                                ${s.style === profile.activeStyleId ? '<span style="font-size:0.8em; color:var(--primary-color); margin-left:6px;">✓ Active</span>' : ''}
+                                ${s.style === profile.activeStyleId ? '<span style="font-size:0.8em; color:var(--primary); margin-left:6px;">✓ Active</span>' : ''}
                             </div>
                             <p style="font-size: 0.9rem; color: var(--text-secondary); margin: 0;">${s.description}</p>
                         </div>

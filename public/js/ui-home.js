@@ -41,6 +41,18 @@ export async function renderHome() {
                     <div class="gen-aurora gen-aurora-1"></div>
                     <div class="gen-aurora gen-aurora-2"></div>
                     <div class="gen-aurora gen-aurora-3"></div>
+                    <div class="gen-particle"></div>
+                    <div class="gen-particle"></div>
+                    <div class="gen-particle"></div>
+                    <div class="gen-particle"></div>
+                    <div class="gen-particle"></div>
+                    <div class="gen-particle"></div>
+                    <div class="gen-particle"></div>
+                    <div class="gen-particle"></div>
+                    <div class="gen-particle"></div>
+                    <div class="gen-particle"></div>
+                    <div class="gen-particle"></div>
+                    <div class="gen-particle"></div>
                     <div class="gen-content">
                         <svg class="spinner" width="28" height="28" viewBox="0 0 66 66" xmlns="http://www.w3.org/2000/svg">
                             <circle class="path" fill="none" stroke-width="6" stroke-linecap="round" cx="33" cy="33" r="30"/>
@@ -124,6 +136,16 @@ async function handleGenerate() {
     toggleDebugBtn.textContent = 'No Details';
     toggleDebugBtn.disabled = true;
 
+    // Use custom location if locationMode is 'custom' and activeLocationId is set
+    const profile2 = AppState.currentProfile;
+    if (profile2.locationMode === 'custom' && profile2.activeLocationId) {
+        const customLoc = (profile2.locations || []).find(l => l.id === profile2.activeLocationId);
+        if (customLoc) {
+            await doGenerate(customLoc.lat, customLoc.lon, btn, btnLabel, overlay, imgContainer, debugContent, toggleDebugBtn);
+            return;
+        }
+    }
+
     if (!navigator.geolocation) {
         alert('Geolocation is not supported by your browser.');
         resetBtn(btn, btnLabel, overlay);
@@ -131,74 +153,76 @@ async function handleGenerate() {
     }
 
     navigator.geolocation.getCurrentPosition(async (position) => {
-        try {
-            const { latitude, longitude } = position.coords;
-            const profile = AppState.currentProfile;
-
-            const activeImageSizeId = profile.activeImageSizeId || profile.imageSizes.default;
-            const activeImageSize   = profile.imageSizes.sizes[activeImageSizeId];
-
-            let targetWidth  = 1024;
-            let targetHeight = 1024;
-
-            if (activeImageSize?.mode === 'preset') {
-                targetWidth  = activeImageSize.width;
-                targetHeight = activeImageSize.height;
-            } else if (activeImageSize?.mode === 'dynamic') {
-                targetWidth  = Math.round(window.screen.width  * (window.devicePixelRatio || 1));
-                targetHeight = Math.round(window.screen.height * (window.devicePixelRatio || 1));
-                const MAX_DIM = 2048;
-                if (targetWidth > MAX_DIM || targetHeight > MAX_DIM) {
-                    const ratio = targetWidth / targetHeight;
-                    if (ratio > 1) { targetWidth = MAX_DIM; targetHeight = Math.round(MAX_DIM / ratio); }
-                    else           { targetHeight = MAX_DIM; targetWidth = Math.round(MAX_DIM * ratio); }
-                }
-            }
-
-            const response = await fetchApi('/generate-image', 'POST', {
-                userId:     AppState.userId,
-                passkey:    AppState.passkey,
-                profileId:  AppState.profileId,
-                lat:        latitude,
-                lon:        longitude,
-                deviceSize: { width: targetWidth, height: targetHeight }
-            }, {}, currentAbortController.signal);
-
-            // Insert generated image
-            Array.from(imgContainer.children).forEach(c => { if (c.id !== 'loading-overlay') c.remove(); });
-            const img = document.createElement('img');
-            img.src = response.imageUrl;
-            img.alt = 'Generated image';
-            imgContainer.insertBefore(img, overlay);
-
-            // Show actions
-            const actions = document.getElementById('image-actions');
-            actions.style.display = 'flex';
-            document.getElementById('save-image-btn').onclick  = () => saveImage(response.imageUrl);
-            document.getElementById('view-image-btn').onclick  = () => window.open(response.imageUrl, '_blank');
-            document.getElementById('wallpaper-btn').onclick   = () => setWallpaper(response.imageUrl);
-
-            // Debug
-            if (debugContent) debugContent.innerHTML = formatDebug(response.debug);
-            toggleDebugBtn.textContent = 'Show Details';
-            toggleDebugBtn.disabled    = false;
-
-            AppState.lastGenerated = response;
-            AppState.save();
-
-        } catch (err) {
-            if (err.name !== 'AbortError') {
-                console.error(err);
-                alert('Generation failed: ' + err.message);
-            }
-        } finally {
-            resetBtn(btn, btnLabel, overlay);
-        }
-
+        const { latitude, longitude } = position.coords;
+        await doGenerate(latitude, longitude, btn, btnLabel, overlay, imgContainer, debugContent, toggleDebugBtn);
     }, (error) => {
         alert('Location access denied: ' + error.message);
         resetBtn(btn, btnLabel, overlay);
     }, { timeout: 10000 });
+}
+
+async function doGenerate(lat, lon, btn, btnLabel, overlay, imgContainer, debugContent, toggleDebugBtn) {
+    try {
+        const profile = AppState.currentProfile;
+        const activeImageSizeId = profile.activeImageSizeId || profile.imageSizes.default;
+        const activeImageSize   = profile.imageSizes.sizes[activeImageSizeId];
+
+        let targetWidth  = 1024;
+        let targetHeight = 1024;
+
+        if (activeImageSize?.mode === 'preset') {
+            targetWidth  = activeImageSize.width;
+            targetHeight = activeImageSize.height;
+        } else if (activeImageSize?.mode === 'dynamic') {
+            targetWidth  = Math.round(window.screen.width  * (window.devicePixelRatio || 1));
+            targetHeight = Math.round(window.screen.height * (window.devicePixelRatio || 1));
+            const MAX_DIM = 2048;
+            if (targetWidth > MAX_DIM || targetHeight > MAX_DIM) {
+                const ratio = targetWidth / targetHeight;
+                if (ratio > 1) { targetWidth = MAX_DIM; targetHeight = Math.round(MAX_DIM / ratio); }
+                else           { targetHeight = MAX_DIM; targetWidth = Math.round(MAX_DIM * ratio); }
+            }
+        }
+
+        const response = await fetchApi('/generate-image', 'POST', {
+            userId:     AppState.userId,
+            passkey:    AppState.passkey,
+            profileId:  AppState.profileId,
+            lat,
+            lon,
+            deviceSize: { width: targetWidth, height: targetHeight }
+        }, {}, currentAbortController.signal);
+
+        // Insert generated image
+        Array.from(imgContainer.children).forEach(c => { if (c.id !== 'loading-overlay') c.remove(); });
+        const img = document.createElement('img');
+        img.src = response.imageUrl;
+        img.alt = 'Generated image';
+        imgContainer.insertBefore(img, overlay);
+
+        // Show actions
+        const actions = document.getElementById('image-actions');
+        actions.style.display = 'flex';
+        document.getElementById('save-image-btn').onclick  = () => saveImage(response.imageUrl);
+        document.getElementById('view-image-btn').onclick  = () => window.open(response.imageUrl, '_blank');
+        document.getElementById('wallpaper-btn').onclick   = () => setWallpaper(response.imageUrl);
+
+        // Debug
+        if (debugContent) debugContent.innerHTML = formatDebug(response.debug);
+        toggleDebugBtn.textContent = 'Show Details';
+        toggleDebugBtn.disabled    = false;
+
+        AppState.lastGenerated = response;
+        AppState.save();
+
+    } catch (err) {
+        if (err.name !== 'AbortError') {
+            console.error(err);
+            alert('Generation failed: ' + err.message);
+        }
+    } finally {
+        resetBtn(btn, btnLabel, overlay);
+    }
 }
 
 function resetBtn(btn, btnLabel, overlay) {

@@ -226,6 +226,10 @@ export interface ProfileSettings {
   appearance?: "light" | "dark" | "auto";
   language: string;
 
+  // Location mode
+  locationMode?: 'gps' | 'custom';
+  activeLocationId?: string | null;
+
   // Prompt & visual configuration
   activePromptDayId: string;
   activePromptNightId: string;

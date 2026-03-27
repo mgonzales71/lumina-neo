@@ -34,7 +34,7 @@ export function renderPOI() {
             <div style="display: flex; gap: 10px; margin-bottom: 1rem;">
                 <button id="refresh-poi-btn" class="btn">Regenerate via AI</button>
                 <button id="add-poi-btn" class="btn btn-secondary">Add Manually</button>
-                <button id="save-poi-btn" class="btn" style="background-color: var(--primary-color);">Save Changes</button>
+                <button id="save-poi-btn" class="btn">Save Changes</button>
             </div>
         </div>
 
@@ -45,7 +45,7 @@ export function renderPOI() {
     `;
 
     container.innerHTML = html;
-    
+
     // Initial Load
     const initialLoc = locations.find(l => l.id === selectedLocId);
     loadPOIs(selectedLocId, false, initialLoc?.city || '', initialLoc?.state || '', initialLoc?.country || '');
@@ -117,7 +117,7 @@ async function loadPOIs(locationId, refresh = false, city = '', state = '', coun
             country,
             refresh
         });
-        currentPOIs = data; 
+        currentPOIs = data;
         renderPOIList();
     } catch (err) {
         listContainer.innerHTML = `<p style="color: red;">Failed to load POIs: ${err.message}</p>`;
@@ -126,7 +126,7 @@ async function loadPOIs(locationId, refresh = false, city = '', state = '', coun
 
 function renderPOIList() {
     const listContainer = document.getElementById('poi-list-container');
-    
+
     if (currentPOIs.length === 0) {
         listContainer.innerHTML = '<p style="text-align:center; padding: 20px; opacity: 0.6;">No POIs found. Click Regenerate or Add Manually.</p>';
         return;
@@ -146,7 +146,10 @@ function renderPOIList() {
                             <textarea class="poi-desc-input" data-index="${index}" rows="2" placeholder="Description"></textarea>
                         </div>
                     </div>
-                    <button class="btn btn-danger btn-sm delete-poi-btn" data-index="${index}" style="padding: 8px 12px; font-size: 0.85rem;">&times;</button>
+                    <div style="display:flex; flex-direction:column; gap:8px; flex-shrink:0; margin-left:8px;">
+                        <button class="btn btn-sm sanitize-poi-btn" data-index="${index}" title="AI Sanitize" style="padding:8px 10px; font-size:1rem; background:rgba(var(--primary-rgb),0.15); border:1px solid rgba(var(--primary-rgb),0.4); color:var(--primary); border-radius:8px; cursor:pointer;">🔍</button>
+                        <button class="btn btn-danger btn-sm delete-poi-btn" data-index="${index}" style="padding: 8px 10px; font-size: 0.9rem;">&times;</button>
+                    </div>
                 </li>
             `).join('')}
         </ul>
@@ -160,7 +163,7 @@ function renderPOIList() {
     });
 
     document.querySelectorAll('.poi-desc-input').forEach(input => {
-        input.value = currentPOIs[parseInt(input.dataset.index)].description; // Ensure textarea gets correct initial value
+        input.value = currentPOIs[parseInt(input.dataset.index)].description;
         input.addEventListener('change', (e) => {
             const idx = parseInt(e.target.dataset.index);
             currentPOIs[idx].description = e.target.value;
@@ -175,6 +178,43 @@ function renderPOIList() {
             renderPOIList();
         });
     });
+
+    document.querySelectorAll('.sanitize-poi-btn').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+            const idx = parseInt(e.target.dataset.index);
+            const poi = currentPOIs[idx];
+            const loc = getSelectedLocation();
+
+            const originalText = e.target.textContent;
+            e.target.textContent = '…';
+            e.target.disabled = true;
+
+            try {
+                const result = await fetchApi('/poi/sanitize-entry', 'POST', {
+                    userId: AppState.userId,
+                    name: poi.name,
+                    description: poi.description,
+                    city: loc?.city || '',
+                    state: loc?.state || '',
+                    country: loc?.country || ''
+                });
+                currentPOIs[idx].name = result.name;
+                currentPOIs[idx].description = result.description;
+                renderPOIList();
+            } catch (err) {
+                alert('AI sanitize failed: ' + err.message);
+                e.target.textContent = originalText;
+                e.target.disabled = false;
+            }
+        });
+    });
+}
+
+function getSelectedLocation() {
+    const select = document.getElementById('poi-location-select');
+    if (!select) return null;
+    const locId = select.value;
+    return AppState.currentProfile.locations.find(l => l.id === locId) || null;
 }
 
 function addManualPOI() {
@@ -193,7 +233,7 @@ async function savePOIs(locationId, showSuccessAlert = true) {
             locationId,
             pois: currentPOIs
         });
-        if(showSuccessAlert) alert('POIs saved successfully!');
+        if (showSuccessAlert) alert('POIs saved successfully!');
     } catch (err) {
         alert('Failed to save POIs: ' + err.message);
     } finally {

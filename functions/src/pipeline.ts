@@ -195,7 +195,20 @@ export async function generateImagePipeline(env: Env, params: PipelineParams): P
         const encodedPrompt = encodeURIComponent(finalPrompt);
         const apiKey = providerSettings.apiKey || '';
         const keyParam = apiKey ? `&key=${encodeURIComponent(apiKey)}` : '';
-        imageUrl = `https://gen.pollinations.ai/image/${encodedPrompt}?width=${width}&height=${height}&model=${model}&seed=${seed}&nologo=true${keyParam}`;
+        const defaults = providerSettings.image?.defaults || {};
+
+        let extraParams = '';
+        if (defaults.enhance === true || defaults.enhance === 'true') extraParams += '&enhance=true';
+        if (defaults.safe === true || defaults.safe === 'true') extraParams += '&safe=true';
+        if (defaults.transparent === true || defaults.transparent === 'true') extraParams += '&transparent=true';
+        if (defaults.quality && ['low', 'medium', 'high', 'hd'].includes(String(defaults.quality))) {
+            extraParams += `&quality=${defaults.quality}`;
+        }
+        if (defaults.negative_prompt && String(defaults.negative_prompt).trim()) {
+            extraParams += `&negative_prompt=${encodeURIComponent(String(defaults.negative_prompt))}`;
+        }
+
+        imageUrl = `https://gen.pollinations.ai/image/${encodedPrompt}?width=${width}&height=${height}&model=${model}&seed=${seed}&nologo=true${extraParams}${keyParam}`;
     } else {
         imageUrl = 'https://via.placeholder.com/1024x1024?text=Other+Provider';
     }

@@ -7,13 +7,36 @@ let lastSanitized = null;
 export function renderLocations() {
     const container = document.getElementById('locations-tab');
     const profile = AppState.currentProfile;
-    
+
     if (!profile.locations) profile.locations = [];
+    if (!profile.locationMode) profile.locationMode = 'gps';
+
+    const isGPS = profile.locationMode !== 'custom';
 
     let html = `
         <div class="card">
+            <h2>Location Mode</h2>
+            <p style="font-size:0.9rem; opacity:0.8; margin-bottom:16px;">Choose whether to always use your current GPS position or a fixed custom location.</p>
+            <div style="display:flex; gap:10px; margin-bottom:16px;">
+                <button class="btn ${isGPS ? '' : 'btn-secondary'}" id="mode-gps-btn" style="flex:1;">GPS (Follow Me)</button>
+                <button class="btn ${isGPS ? 'btn-secondary' : ''}" id="mode-custom-btn" style="flex:1;">Custom Location</button>
+            </div>
+            ${!isGPS && profile.locations.length > 0 ? `
+                <div class="form-group">
+                    <label>Active Location</label>
+                    <select id="active-location-select">
+                        ${profile.locations.map(loc => `
+                            <option value="${loc.id}" ${loc.id === profile.activeLocationId ? 'selected' : ''}>${loc.city}${loc.state ? ', ' + loc.state : ''}, ${loc.country}</option>
+                        `).join('')}
+                    </select>
+                </div>
+                <button id="save-active-location-btn" class="btn" style="width:100%;">Set Active Location</button>
+            ` : !isGPS ? '<p style="opacity:0.6; font-size:0.9rem;">Add a custom location below to use Custom mode.</p>' : ''}
+        </div>
+
+        <div class="card">
             <h2>Your Locations</h2>
-            <p>Manage the base locations for your scene generation.</p>
+            <p>Manage saved locations. These are used in Custom mode or to load POIs.</p>
             <div style="display:flex; gap:10px; margin-bottom: 20px;">
                 <button id="export-locations-btn" class="btn btn-secondary" style="flex:1;">Export Locations</button>
                 <button id="import-locations-btn" class="btn btn-secondary" style="flex:1;">Import Locations</button>
@@ -21,11 +44,11 @@ export function renderLocations() {
             <ul id="location-list" style="list-style: none; padding: 0; margin-top: 20px;">
                 ${profile.locations.length === 0 ? '<p style="text-align:center; padding: 20px; opacity: 0.6;">No locations added yet.</p>' : ''}
                 ${profile.locations.map((loc, index) => `
-                    <li style="background: rgba(255,255,255,0.05); border-radius: 12px; padding: 15px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; border: 1px solid var(--glass-border);">
+                    <li style="background: rgba(255,255,255,0.05); border-radius: 12px; padding: 15px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; border: 1px solid ${loc.id === profile.activeLocationId && !isGPS ? 'var(--primary)' : 'var(--glass-border)'};">
                         <div>
-                            <div style="font-size: 1.1rem; font-weight: 600;">${loc.city}</div>
+                            <div style="font-size: 1.1rem; font-weight: 600;">${loc.city}${loc.id === profile.activeLocationId && !isGPS ? ' <span style="font-size:0.8em; color:var(--primary);">✓ Active</span>' : ''}</div>
                             <div style="font-size: 0.9rem; color: var(--text-secondary);">${loc.state ? loc.state + ', ' : ''}${loc.country}</div>
-                            <div style="font-size: 0.75rem; color: var(--primary-color); font-family: monospace; margin-top: 4px;">${loc.lat.toFixed(4)}, ${loc.lon.toFixed(4)}</div>
+                            <div style="font-size: 0.75rem; color: var(--primary); font-family: monospace; margin-top: 4px;">${loc.lat.toFixed(4)}, ${loc.lon.toFixed(4)}</div>
                         </div>
                         <button class="btn btn-danger btn-sm delete-loc-btn" data-index="${index}" style="padding: 8px 12px; font-size: 0.85rem;">Delete</button>
                     </li>
@@ -36,7 +59,7 @@ export function renderLocations() {
         <div class="card">
             <h3>Add New Location</h3>
             <p style="font-size: 0.9rem; margin-bottom: 20px; opacity: 0.8;">Enter whatever you know, then click <strong>Lookup</strong> to automatically fetch and clean the details using Nominatim.</p>
-            
+
             <div class="form-group">
                 <label>City / Place Name</label>
                 <input type="text" id="loc-city" placeholder="e.g. Paris or Portland">
@@ -49,7 +72,7 @@ export function renderLocations() {
                 <label>Country</label>
                 <input type="text" id="loc-country" placeholder="e.g. USA or France">
             </div>
-            
+
             <div id="sanitize-result" style="display:none; margin-bottom: 20px; padding: 15px; background: rgba(52, 199, 89, 0.1); border: 1px solid var(--success-color); border-radius: 12px;">
                 <div style="font-weight: 600; color: var(--success-color); margin-bottom: 5px;">✓ Location Verified</div>
                 <div id="verified-text" style="font-size: 0.95rem;"></div>
@@ -64,12 +87,42 @@ export function renderLocations() {
 
     container.innerHTML = html;
 
-    // Event Listeners
+    // Mode toggle buttons
+    document.getElementById('mode-gps-btn').addEventListener('click', async () => {
+        profile.locationMode = 'gps';
+        await saveProfile(profile);
+        renderLocations();
+    });
+
+    document.getElementById('mode-custom-btn').addEventListener('click', async () => {
+        profile.locationMode = 'custom';
+        if (profile.locations.length > 0 && !profile.activeLocationId) {
+            profile.activeLocationId = profile.locations[0].id;
+        }
+        await saveProfile(profile);
+        renderLocations();
+    });
+
+    const saveActiveBtn = document.getElementById('save-active-location-btn');
+    if (saveActiveBtn) {
+        saveActiveBtn.addEventListener('click', async () => {
+            const sel = document.getElementById('active-location-select');
+            profile.activeLocationId = sel.value;
+            await saveProfile(profile);
+            renderLocations();
+        });
+    }
+
+    // Delete buttons
     document.querySelectorAll('.delete-loc-btn').forEach(btn => {
         btn.addEventListener('click', async (e) => {
             if (!confirm('Are you sure you want to delete this location?')) return;
             const index = parseInt(e.target.dataset.index);
+            const removed = profile.locations[index];
             profile.locations.splice(index, 1);
+            if (profile.activeLocationId === removed.id) {
+                profile.activeLocationId = profile.locations[0]?.id || null;
+            }
             await saveProfile(profile);
             renderLocations();
         });
@@ -163,8 +216,10 @@ export function renderLocations() {
 
         try {
             profile.locations.push(lastSanitized);
+            // Auto-set as active if first custom location
+            if (!profile.activeLocationId) profile.activeLocationId = lastSanitized.id;
             await saveProfile(profile);
-            
+
             lastSanitized = null;
             renderLocations();
         } catch (err) {

@@ -1,6 +1,6 @@
 /**
  * Lumina Neo Pages Functions API Entry Point
- * Version: v1.4.0
+ * Version: v1.5.0
  */
 import { Env, ApiResponse, UserRecord, ProfileSettings, LocationEntry, POIEntry, PromptVariables } from '../src/types';
 import { PROVIDER_REGISTRY } from '../src/providers';
@@ -169,6 +169,9 @@ export const onRequest: PagesFunction<Env> = async (context) => {
     }
     if (url.pathname === '/api/poi/save' && method === 'POST') {
       return await handleSavePOI(request, env);
+    }
+    if (url.pathname === '/api/poi/sanitize-entry' && method === 'POST') {
+      return await handleSanitizePOIEntry(request, env);
     }
     if (url.pathname === '/api/profile/delete' && method === 'DELETE') {
       return await handleDeleteProfile(request, env);
@@ -451,6 +454,66 @@ async function handleSavePOI(request: Request, env: Env): Promise<Response> {
     await env.KV_POI.put(key, JSON.stringify(pois));
 
     return jsonResponse({ ok: true, data: pois });
+}
+
+async function handleSanitizePOIEntry(request: Request, env: Env): Promise<Response> {
+    const body = await request.json() as any;
+    const { userId, name, description, city, state, country } = body;
+
+    if (!name) {
+        return errorResponse('INVALID_INPUT', 'Missing POI name');
+    }
+
+    // Use active provider for text generation
+    const profileKeys = await env.KV_PROFILES.list({ prefix: `PROF:${userId}:` });
+    let profile: ProfileSettings | null = null;
+    if (profileKeys.keys.length > 0) {
+        profile = await env.KV_PROFILES.get<ProfileSettings>(profileKeys.keys[0].name, 'json');
+    }
+    if (!profile) return errorResponse('NOT_FOUND', 'Profile not found');
+
+    const providerId = profile.providerSettings.activeProvider;
+    const providerCfg = profile.providerSettings.providers[providerId];
+    const registry = PROVIDER_REGISTRY[providerId];
+
+    if (!providerCfg || !providerCfg.enabled || !registry || !registry.categories.text) {
+        return errorResponse('CONFIG_ERROR', 'Text provider not configured or enabled');
+    }
+
+    const model = providerCfg.text?.selectedModel || 'openai';
+    const locationCtx = [city, state, country].filter(Boolean).join(', ');
+    const systemPrompt = 'You are a concise editor that cleans up points of interest names and descriptions for AI image generation. Return only a JSON object with "name" and "description" keys and no other text.';
+    const userPrompt = `Clean up this point of interest for ${locationCtx || 'an unspecified location'}. Fix the name to be properly capitalized and accurate. Rewrite the description to be 1-2 visually descriptive sentences suitable for image generation prompts, focusing on architecture, scenery, and atmosphere. Return ONLY a JSON object like {"name":"...","description":"..."}.\n\nName: ${name}\nDescription: ${description}`;
+
+    try {
+        const response = await fetch(registry.categories.text.generate.url!, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${providerCfg.apiKey}`
+            },
+            body: JSON.stringify({
+                model,
+                messages: [
+                    { role: 'system', content: systemPrompt },
+                    { role: 'user', content: userPrompt }
+                ]
+            })
+        });
+
+        const result = await response.json() as any;
+        const content = result.choices?.[0]?.message?.content || '{}';
+        const start = content.indexOf('{');
+        const end = content.lastIndexOf('}');
+        if (start === -1 || end === -1 || end < start) throw new Error('No JSON object found in AI response');
+        const parsed = JSON.parse(content.slice(start, end + 1));
+
+        if (!parsed.name || !parsed.description) throw new Error('Invalid AI response structure');
+        return jsonResponse({ ok: true, data: { name: parsed.name, description: parsed.description } });
+
+    } catch (err: any) {
+        return errorResponse('GENERATION_FAILED', 'Failed to sanitize POI: ' + err.message);
+    }
 }
 
 async function handleGenerateImage(request: Request, env: Env): Promise<Response> {
