@@ -66,9 +66,13 @@ export async function renderProviders() {
             <div class="card">
                 <div style="display: flex; justify-content: space-between; align-items: center;">
                     <h3>${def.label} <a href="${def.docsUrl}" target="_blank" style="font-size: 0.8rem;">(Docs)</a></h3>
-                    <label>
-                        <input type="checkbox" class="provider-enable" data-id="${def.id}" ${userConf.enabled ? 'checked' : ''}> Enabled
-                    </label>
+                    <button class="provider-enable-btn ${userConf.enabled ? 'toggle-on' : ''}" data-id="${def.id}" style="
+                        min-width:58px; padding:5px 12px; border-radius:20px; font-size:0.8rem; font-weight:600;
+                        border:1.5px solid ${userConf.enabled ? 'var(--primary)' : 'var(--glass-border)'};
+                        background:${userConf.enabled ? 'rgba(var(--primary-rgb),0.2)' : 'rgba(255,255,255,0.05)'};
+                        color:${userConf.enabled ? 'var(--primary)' : 'var(--text-secondary)'};
+                        cursor:pointer; transition:all 0.2s;
+                    ">${userConf.enabled ? 'ON' : 'OFF'}</button>
                 </div>
                 
                 <div class="provider-config" id="config-${def.id}" style="display: ${userConf.enabled ? 'block' : 'none'}; margin-top: 10px;">
@@ -109,11 +113,17 @@ export async function renderProviders() {
         await saveProfile(profile);
     });
 
-    document.querySelectorAll('.provider-enable').forEach(chk => {
-        chk.addEventListener('change', (e) => {
+    document.querySelectorAll('.provider-enable-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
             const id = e.target.dataset.id;
-            settings.providers[id].enabled = e.target.checked;
-            document.getElementById(`config-${id}`).style.display = e.target.checked ? 'block' : 'none';
+            const newVal = !settings.providers[id].enabled;
+            settings.providers[id].enabled = newVal;
+            e.target.classList.toggle('toggle-on', newVal);
+            e.target.textContent = newVal ? 'ON' : 'OFF';
+            e.target.style.border = `1.5px solid ${newVal ? 'var(--primary)' : 'var(--glass-border)'}`;
+            e.target.style.background = newVal ? 'rgba(var(--primary-rgb),0.2)' : 'rgba(255,255,255,0.05)';
+            e.target.style.color = newVal ? 'var(--primary)' : 'var(--text-secondary)';
+            document.getElementById(`config-${id}`).style.display = newVal ? 'block' : 'none';
         });
     });
 
