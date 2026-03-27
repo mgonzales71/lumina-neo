@@ -64,19 +64,19 @@ export function renderPrompts() {
                     const isDayActive = p.id === profile.activePromptDayId;
                     const isNightActive = p.id === profile.activePromptNightId;
                     return `
-                    <li style="background: rgba(255,255,255,0.05); border-radius: 12px; padding: 15px; margin-bottom: 10px; display: flex; flex-direction: column; gap: 10px; border: 1px solid ${isDayActive || isNightActive ? 'var(--primary-color)' : 'var(--glass-border)'};">
+                    <li style="background: rgba(255,255,255,0.05); border-radius: 12px; padding: 15px; margin-bottom: 10px; display: flex; flex-direction: column; gap: 10px; border: 1px solid ${isDayActive || isNightActive ? 'var(--primary)' : 'var(--glass-border)'};">
                         <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
                             <div>
                                 <strong style="font-size: 1.1rem;">${p.label}</strong>
                                 <span style="font-size: 0.8rem; color: var(--text-secondary); margin-left: 6px;">(${p.id})</span>
-                                ${isDayActive ? '<span style="font-size:0.8em; color:var(--primary-color); margin-left:6px;">☀ Day</span>' : ''}
-                                ${isNightActive ? '<span style="font-size:0.8em; color:var(--primary-color); margin-left:6px;">☾ Night</span>' : ''}
+                                ${isDayActive ? '<span style="font-size:0.8em; color:var(--primary); margin-left:6px;">☀ Day</span>' : ''}
+                                ${isNightActive ? '<span style="font-size:0.8em; color:var(--primary); margin-left:6px;">☾ Night</span>' : ''}
                             </div>
                             <div style="display:flex; gap: 8px; flex-wrap: wrap;">
                                 ${!isDayActive ? `<button class="btn btn-sm set-day-prompt-btn" data-id="${p.id}" style="padding: 6px 10px; font-size: 0.8rem;">☀ Set Day</button>` : ''}
                                 ${!isNightActive ? `<button class="btn btn-sm set-night-prompt-btn" data-id="${p.id}" style="padding: 6px 10px; font-size: 0.8rem;">☾ Set Night</button>` : ''}
                                 <button class="btn btn-secondary btn-sm edit-prompt-btn" data-id="${p.id}" style="padding: 8px 12px; font-size: 0.85rem;">Edit</button>
-                                <button class="btn btn-secondary btn-sm delete-prompt-btn" data-id="${p.id}" style="padding: 8px 12px; font-size: 0.85rem;">Delete</button>
+                                <button class="btn btn-danger btn-sm delete-prompt-btn" data-id="${p.id}" style="padding: 8px 12px; font-size: 0.85rem;">Delete</button>
                             </div>
                         </div>
                         <div style="font-size: 0.85rem; color: var(--text-secondary); word-break: break-word;">${p.template.substring(0, 120)}${p.template.length > 120 ? '…' : ''}</div>
@@ -97,7 +97,7 @@ export function renderPrompts() {
             </div>
             <div class="form-group">
                 <label>Template</label>
-                <div style="background: rgba(0,0,0,0.2); border: 1px solid var(--glass-border); border-radius: 10px; padding: 12px; margin-bottom: 8px;">
+                <div style="background: var(--input-bg); border: 0.5px solid var(--input-border); border-radius: var(--r-md); padding: 12px; margin-bottom: 8px;">
                     <div style="font-size: 0.75rem; opacity: 0.6; margin-bottom: 10px;">Tap a variable to insert it at the cursor:</div>
                     ${buildVariableChips()}
                 </div>
@@ -105,7 +105,7 @@ export function renderPrompts() {
             </div>
             <div style="display: flex; gap: 10px;">
                 <button id="save-prompt-btn" class="btn" style="flex:1;">Add Prompt</button>
-                <button id="cancel-prompt-edit-btn" class="btn btn-secondary" style="flex:1; display:none;">Cancel Edit</button>
+                <button id="cancel-prompt-edit-btn" class="btn btn-cancel" style="flex:1; display:none;">Cancel Edit</button>
             </div>
         </div>
     `;

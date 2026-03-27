@@ -31,7 +31,7 @@ export function renderStyles() {
                         <div style="display:flex; gap: 8px; flex-shrink:0; margin-left: 10px;">
                             ${s.style !== profile.activeStyleId ? `<button class="btn btn-sm set-active-style-btn" data-index="${index}" style="padding: 8px 12px; font-size: 0.85rem;">Set Active</button>` : ''}
                             <button class="btn btn-secondary btn-sm edit-style-btn" data-index="${index}" style="padding: 8px 12px; font-size: 0.85rem;">Edit</button>
-                            <button class="btn btn-secondary btn-sm delete-style-btn" data-index="${index}" style="padding: 8px 12px; font-size: 0.85rem;">Delete</button>
+                            <button class="btn btn-danger btn-sm delete-style-btn" data-index="${index}" style="padding: 8px 12px; font-size: 0.85rem;">Delete</button>
                         </div>
                     </li>
                 `).join('')}
@@ -50,7 +50,7 @@ export function renderStyles() {
             </div>
             <div style="display: flex; gap: 10px;">
                 <button id="save-style-btn" class="btn" style="flex:1;">Add Style</button>
-                <button id="cancel-style-edit-btn" class="btn btn-secondary" style="flex:1; display:none;">Cancel Edit</button>
+                <button id="cancel-style-edit-btn" class="btn btn-cancel" style="flex:1; display:none;">Cancel Edit</button>
             </div>
         </div>
     `;

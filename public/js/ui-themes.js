@@ -39,7 +39,7 @@ export function renderThemes() {
                         </div>
                         <div style="display:flex; gap: 8px;">
                             <button class="btn btn-secondary btn-sm edit-theme-btn" data-index="${index}" style="padding: 8px 12px; font-size: 0.85rem;">Edit</button>
-                            <button class="btn btn-secondary btn-sm delete-theme-btn" data-index="${index}" style="padding: 8px 12px; font-size: 0.85rem;">Delete</button>
+                            <button class="btn btn-danger btn-sm delete-theme-btn" data-index="${index}" style="padding: 8px 12px; font-size: 0.85rem;">Delete</button>
                         </div>
                     </li>
                 `).join('')}
@@ -64,7 +64,7 @@ export function renderThemes() {
             </div>
             <div style="display: flex; gap: 10px;">
                 <button id="save-theme-btn" class="btn" style="flex:1;">Add Theme</button>
-                <button id="cancel-edit-btn" class="btn btn-secondary" style="flex:1; display:none;">Cancel Edit</button>
+                <button id="cancel-edit-btn" class="btn btn-cancel" style="flex:1; display:none;">Cancel Edit</button>
             </div>
         </div>
     `;

@@ -43,7 +43,7 @@ export function renderSizes() {
                         </div>
                         <div style="display:flex; gap: 8px;">
                             ${key !== 'DEVICE' ? `<button class="btn btn-secondary btn-sm edit-size-btn" data-key="${key}" style="padding: 8px 12px; font-size: 0.85rem;">Edit</button>` : ''}
-                            ${key !== 'DEVICE' ? `<button class="btn btn-secondary btn-sm delete-size-btn" data-key="${key}" style="padding: 8px 12px; font-size: 0.85rem;">Delete</button>` : ''}
+                            ${key !== 'DEVICE' ? `<button class="btn btn-danger btn-sm delete-size-btn" data-key="${key}" style="padding: 8px 12px; font-size: 0.85rem;">Delete</button>` : ''}
                         </div>
                     </li>
                 `).join('')}
@@ -81,7 +81,7 @@ export function renderSizes() {
             </div>
             <div style="display: flex; gap: 10px;">
                 <button id="save-size-btn" class="btn" style="flex:1;">Add Size</button>
-                <button id="cancel-size-edit-btn" class="btn btn-secondary" style="flex:1; display:none;">Cancel Edit</button>
+                <button id="cancel-size-edit-btn" class="btn btn-cancel" style="flex:1; display:none;">Cancel Edit</button>
             </div>
         </div>
     `;

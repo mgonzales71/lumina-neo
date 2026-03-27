@@ -1,5 +1,5 @@
 /* ============================================================
-   Lumina Neo — Liquid Glass UI  v1.6.2
+   Lumina Neo — Liquid Glass UI  v1.6.3
    Inspired by GlassKit (glasskit.jungherz.com)
    Aurora background system + theme/color picker
    ============================================================ */
@@ -566,7 +566,39 @@ textarea { resize: vertical; min-height: 76px; }
 
 .btn-sm    { padding: 7px 11px; font-size: 0.8rem; border-radius: var(--r-sm); }
 .btn-block { width: 100%; justify-content: center; }
-.btn-danger { background: var(--danger); box-shadow: 0 3px 12px rgba(255,69,58,0.35); }
+
+/* Danger — full red gradient + glow */
+.btn-danger {
+    background: linear-gradient(140deg, #FF453A 0%, #C62117 100%);
+    color: #fff;
+    box-shadow: 0 4px 18px rgba(255, 69, 58, 0.45);
+    border: none;
+}
+@media (hover: hover) {
+    .btn.btn-danger:hover {
+        transform: translateY(-2px);
+        filter: brightness(1.08);
+        box-shadow: 0 6px 24px rgba(255, 69, 58, 0.65);
+    }
+}
+
+/* Cancel — ghost red */
+.btn-cancel {
+    background: rgba(255, 69, 58, 0.08);
+    color: var(--danger);
+    border: 0.5px solid rgba(255, 69, 58, 0.28);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+}
+@media (hover: hover) {
+    .btn.btn-cancel:hover {
+        background: rgba(255, 69, 58, 0.14);
+        border-color: rgba(255, 69, 58, 0.44);
+        color: var(--danger);
+        box-shadow: inset 0 1px 0 rgba(255,255,255,0.05), 0 4px 16px rgba(255, 69, 58, 0.32);
+    }
+}
 
 /* ── Code / Snippets ──────────────────────────────────────── */
 code, .code-snippet {

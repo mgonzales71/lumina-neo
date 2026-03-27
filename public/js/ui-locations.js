@@ -27,7 +27,7 @@ export function renderLocations() {
                             <div style="font-size: 0.9rem; color: var(--text-secondary);">${loc.state ? loc.state + ', ' : ''}${loc.country}</div>
                             <div style="font-size: 0.75rem; color: var(--primary-color); font-family: monospace; margin-top: 4px;">${loc.lat.toFixed(4)}, ${loc.lon.toFixed(4)}</div>
                         </div>
-                        <button class="btn btn-secondary btn-sm delete-loc-btn" data-index="${index}" style="padding: 8px 12px; font-size: 0.85rem;">Delete</button>
+                        <button class="btn btn-danger btn-sm delete-loc-btn" data-index="${index}" style="padding: 8px 12px; font-size: 0.85rem;">Delete</button>
                     </li>
                 `).join('')}
             </ul>

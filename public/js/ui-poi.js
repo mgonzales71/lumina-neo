@@ -146,7 +146,7 @@ function renderPOIList() {
                             <textarea class="poi-desc-input" data-index="${index}" rows="2" placeholder="Description"></textarea>
                         </div>
                     </div>
-                    <button class="btn btn-secondary btn-sm delete-poi-btn" data-index="${index}" style="padding: 8px 12px; font-size: 0.85rem;">&times;</button>
+                    <button class="btn btn-danger btn-sm delete-poi-btn" data-index="${index}" style="padding: 8px 12px; font-size: 0.85rem;">&times;</button>
                 </li>
             `).join('')}
         </ul>

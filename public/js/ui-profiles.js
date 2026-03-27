@@ -38,7 +38,7 @@ export async function renderProfiles() {
                         </div>
                         <div style="display:flex; gap: 8px;">
                             ${p.id !== profile.id ? `<button class="btn btn-secondary btn-sm switch-profile-btn" data-id="${p.id}" style="padding: 8px 12px; font-size: 0.85rem;">Switch To</button>` : ''}
-                            ${p.id !== profile.id ? `<button class="btn btn-secondary btn-sm delete-profile-btn" data-id="${p.id}" style="padding: 8px 12px; font-size: 0.85rem;">Delete</button>` : ''}
+                            ${p.id !== profile.id ? `<button class="btn btn-danger btn-sm delete-profile-btn" data-id="${p.id}" style="padding: 8px 12px; font-size: 0.85rem;">Delete</button>` : ''}
                         </div>
                     </li>
                 `).join('')}
