@@ -1,5 +1,6 @@
 import { Env, ProfileSettings, POIEntry, PromptVariables } from './types';
 import { renderPrompt, reverseGeocode, getWeather, getMoonData, resolveTheme } from './utils';
+import { PROVIDER_REGISTRY } from './providers';
 
 export interface PipelineParams {
     userId: string;
@@ -42,13 +43,11 @@ export async function generateImagePipeline(env: Env, params: PipelineParams): P
     const geo = await reverseGeocode(lat, lon);
     const locationId = `${geo.city}-${geo.state}-${geo.country}`.toLowerCase().replace(/[^a-z0-9]/g, '-');
     
-    // 3. POI
+    // 3. POI — load from cache or auto-generate via AI for new locations
     const poiKey = `POI:${locationId}`;
     let pois = await env.KV_POI.get<POIEntry[]>(poiKey, 'json');
     if (!pois || pois.length === 0) {
-        pois = [
-            { name: 'Local Landmark', description: 'A significant local site.' }
-        ];
+        pois = await generateAndCachePOIs(env, profile, poiKey, geo.city, geo.state, geo.country);
     }
     const selectedPOI = pois[Math.floor(Math.random() * pois.length)];
 
@@ -231,4 +230,74 @@ export async function generateImagePipeline(env: Env, params: PipelineParams): P
             temp: weather.tempF
         }
     };
+}
+
+/**
+ * Auto-generates POIs for a location using the profile's text provider and
+ * caches them in KV_POI. Called when a GPS location has no cached POIs yet
+ * (first visit, iOS Shortcut in a new city, etc.).
+ * Falls back to a single generic placeholder if AI generation fails.
+ */
+async function generateAndCachePOIs(
+    env: Env,
+    profile: ProfileSettings,
+    poiKey: string,
+    city: string,
+    state: string,
+    country: string
+): Promise<POIEntry[]> {
+    const fallback: POIEntry[] = [{ name: city || 'Local Landmark', description: `A notable landmark in ${[city, state, country].filter(Boolean).join(', ')}.` }];
+
+    try {
+        const providerId = profile.providerSettings.activeProvider;
+        const providerCfg = profile.providerSettings.providers[providerId];
+        const registry = PROVIDER_REGISTRY[providerId];
+
+        if (!providerCfg?.enabled || !registry?.categories.text) return fallback;
+
+        const model = providerCfg.text?.selectedModel || 'openai';
+        const isUS = country === 'United States' || country === 'US' || country === 'USA';
+        const locationStr = isUS
+            ? `the city of ${city} in the state of ${state}`
+            : [city, state, country].filter(Boolean).join(', ');
+
+        const systemPrompt = 'You are an expert on points of interest and other unique and notable places of things views or vistas of requested locations. Do not cite sources or any additional information beyond returning one item per line with no formatting.';
+        const userPrompt = `Task: Generate a list of up to 30 visually unique points of interest, landmarks, or vistas in or nearby ${locationStr}. Format Rules: 1. Output ONLY a raw JSON array of objects. 2. Do NOT include markdown code blocks (no backticks). 3. Do NOT include any introductory or concluding text. 4. Each object must have exactly two keys: "name" and "description". 5. "description" must be 1-2, concise sentences that visually describes the named point of interest.`;
+
+        const response = await fetch(registry.categories.text.generate.url!, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${providerCfg.apiKey}`
+            },
+            body: JSON.stringify({
+                model,
+                messages: [
+                    { role: 'system', content: systemPrompt },
+                    { role: 'user', content: userPrompt }
+                ]
+            })
+        });
+
+        const result = await response.json() as any;
+        const content = result.choices?.[0]?.message?.content || '[]';
+        const start = content.indexOf('[');
+        const end = content.lastIndexOf(']');
+        if (start === -1 || end === -1 || end < start) return fallback;
+
+        const extracted = content.slice(start, end + 1)
+            .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '')
+            .replace(/\r?\n|\r/g, ' ')
+            .replace(/\t/g, ' ');
+
+        const pois: POIEntry[] = JSON.parse(extracted);
+        if (Array.isArray(pois) && pois.length > 0) {
+            await env.KV_POI.put(poiKey, JSON.stringify(pois));
+            return pois;
+        }
+        return fallback;
+
+    } catch {
+        return fallback;
+    }
 }
