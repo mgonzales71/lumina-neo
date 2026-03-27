@@ -1,6 +1,5 @@
 import { AppState } from './state.js';
 import { fetchApi } from './api.js';
-import { applyAppearance } from './app.js';
 import { exportData, importData } from './utils.js';
 
 export async function renderProfiles() {
@@ -56,15 +55,6 @@ export async function renderProfiles() {
                 <label>Name</label>
                 <input type="text" id="profile-name" value="${profile.name}">
             </div>
-             <div class="form-group">
-                <label>Appearance (UI)</label>
-                <select id="profile-appearance">
-                    <option value="auto" ${profile.appearance === 'auto' ? 'selected' : ''}>Auto (Sunrise/Sunset)</option>
-                    <option value="dark" ${profile.appearance === 'dark' ? 'selected' : ''}>Dark</option>
-                    <option value="light" ${profile.appearance === 'light' ? 'selected' : ''}>Light</option>
-                </select>
-                <p style="font-size: 0.8rem; margin-top: 5px; opacity: 0.7;">Auto mode switches between light and dark based on your local sunrise and sunset.</p>
-            </div>
             <button id="save-current-profile-btn" class="btn">Save Changes</button>
         </div>
 
@@ -93,14 +83,11 @@ export async function renderProfiles() {
     // Event Listeners for current profile settings
     document.getElementById('save-current-profile-btn').addEventListener('click', async () => {
         const newName = document.getElementById('profile-name').value;
-        const newAppearance = document.getElementById('profile-appearance').value;
-        
-        const updatedProfile = { ...profile, name: newName, appearance: newAppearance };
-        
+        const updatedProfile = { ...profile, name: newName };
+
         try {
             await fetchApi('/profile', 'PUT', { userId: AppState.userId, profile: updatedProfile });
             AppState.setProfile(updatedProfile);
-            await applyAppearance();
             alert('Profile settings saved!');
             renderProfiles(); // Re-render to update list
         } catch (err) {
@@ -183,7 +170,7 @@ export async function renderProfiles() {
         if (!confirm('Importing profiles will add/overwrite profiles for this user. Existing profiles with matching IDs will be overwritten. Continue?')) return;
         try {
             const importedProfiles = await importData();
-            if (!Array.isArray(importedProfiles) || !importedProfiles.every(p => 'id' in p && 'name' in p && 'appearance' in p)) {
+            if (!Array.isArray(importedProfiles) || !importedProfiles.every(p => 'id' in p && 'name' in p)) {
                 throw new Error('Invalid profiles file format. Expected an array of profile objects.');
             }
             
@@ -212,7 +199,6 @@ function createDefaultProfile(id) {
   return {
     id,
     name: 'Default Profile',
-    appearance: 'auto',
     language: 'en',
     activePromptDayId: 'POI_DAYTIME',
     activePromptNightId: 'POI_NIGHTTIME',

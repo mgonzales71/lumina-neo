@@ -66,6 +66,11 @@ export interface PromptVariables {
   // POI
   poi_name: string;
   poi_desc: string;
+
+  // Convenience aliases (short-form template variable names)
+  time_of_day: "Daytime" | "Nighttime";
+  datetime: string;
+  temperature: string;
 }
 
 /**
@@ -217,8 +222,8 @@ export interface ProfileSettings {
   name: string;
   email?: string;
 
-  // UI preferences
-  appearance: "light" | "dark" | "auto";
+  // UI preferences (appearance is now frontend-only via localStorage)
+  appearance?: "light" | "dark" | "auto";
   language: string;
 
   // Prompt & visual configuration

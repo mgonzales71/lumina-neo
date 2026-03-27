@@ -46,7 +46,6 @@ function createDefaultProfile(id: string, name = 'Default Profile'): ProfileSett
   return {
     id,
     name,
-    appearance: 'auto',
     language: 'en',
     activePromptDayId: 'POI_DAYTIME',
     activePromptNightId: 'POI_NIGHTTIME',

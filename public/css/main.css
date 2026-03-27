@@ -1,5 +1,5 @@
 /* ============================================================
-   Lumina Neo — Liquid Glass UI  v1.6.0
+   Lumina Neo — Liquid Glass UI  v1.6.1
    Inspired by GlassKit (glasskit.jungherz.com)
    Aurora background system + theme/color picker
    ============================================================ */
@@ -250,13 +250,19 @@ body {
     }
 }
 
-/* Theme toggle icon — CSS-driven, no JS needed for state */
-/* Dark (default): show moon */
-.theme-toggle .icon-sun  { display: none; }
-.theme-toggle .icon-moon { display: block; }
-/* Light: show sun */
-[data-theme="light"] .theme-toggle .icon-sun  { display: block; }
-[data-theme="light"] .theme-toggle .icon-moon { display: none; }
+/* Theme toggle icon — driven by data-mode attribute on the button */
+/* Default (auto): half-circle */
+#theme-toggle-btn .icon-auto { display: block; }
+#theme-toggle-btn .icon-sun  { display: none; }
+#theme-toggle-btn .icon-moon { display: none; }
+/* Light */
+#theme-toggle-btn[data-mode="light"] .icon-auto { display: none; }
+#theme-toggle-btn[data-mode="light"] .icon-sun  { display: block; }
+#theme-toggle-btn[data-mode="light"] .icon-moon { display: none; }
+/* Dark */
+#theme-toggle-btn[data-mode="dark"] .icon-auto { display: none; }
+#theme-toggle-btn[data-mode="dark"] .icon-sun  { display: none; }
+#theme-toggle-btn[data-mode="dark"] .icon-moon { display: block; }
 
 /* ── BG Color Picker ──────────────────────────────────────── */
 .bg-picker-wrap { position: relative; }

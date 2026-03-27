@@ -1,6 +1,6 @@
 /**
  * Lumina Neo Frontend
- * Version: v1.1.5
+ * Version: v1.1.6
  * SPA application bootstrapping and navigation
  */
 import { renderHome } from './ui-home.js';
@@ -57,62 +57,36 @@ async function loadProfile() {
 }
 
 export async function applyAppearance() {
-    // Respect manual theme override — set via theme toggle button
-    const themeOverride = localStorage.getItem('lumina_theme');
-    if (themeOverride) {
-        if (themeOverride === 'dark') {
-            document.documentElement.setAttribute('data-theme', 'dark');
-        } else {
-            document.documentElement.removeAttribute('data-theme');
-        }
+    const themeMode = localStorage.getItem('lumina_theme') || 'auto';
+
+    if (themeMode === 'light') {
+        document.documentElement.setAttribute('data-theme', 'light');
+        return;
+    }
+    if (themeMode === 'dark') {
+        document.documentElement.setAttribute('data-theme', 'dark');
         return;
     }
 
-    const profile = AppState.currentProfile;
-    if (!profile) return;
-
-    let mode = profile.appearance || 'auto';
-
-    if (mode === 'auto') {
-        let isDay = false;
-        
-        try {
-            const pos = await new Promise((resolve, reject) => {
-                navigator.geolocation.getCurrentPosition(resolve, reject, { timeout: 5000 });
-            });
-            
-            const lat = pos.coords.latitude;
-            const lon = pos.coords.longitude;
-            
-            const res = await fetchApi(`/env?lat=${lat}&lon=${lon}`);
-            const { sunrise, sunset } = res.weather;
-            
-            const now = new Date();
-            const currentTime = now.getHours() * 60 + now.getMinutes();
-            
-            const parseTime = (t) => {
-                const [h, m] = t.split(':').map(Number);
-                return h * 60 + m;
-            };
-            
-            const sunriseMinutes = parseTime(sunrise);
-            const sunsetMinutes = parseTime(sunset);
-            
-            isDay = currentTime >= sunriseMinutes && currentTime < sunsetMinutes;
-            console.log(`Auto Appearance: now=${currentTime}, sunrise=${sunriseMinutes}, sunset=${sunsetMinutes}, isDay=${isDay}`);
-        } catch (err) {
-            console.warn('Geolocation or Env API failed for auto appearance, falling back to system preference:', err);
-            isDay = !window.matchMedia('(prefers-color-scheme: dark)').matches;
-        }
-        
-        mode = isDay ? 'light' : 'dark';
+    // 'auto': determine from sunrise/sunset at current location
+    let isDay = false;
+    try {
+        const pos = await new Promise((resolve, reject) => {
+            navigator.geolocation.getCurrentPosition(resolve, reject, { timeout: 5000 });
+        });
+        const res = await fetchApi(`/env?lat=${pos.coords.latitude}&lon=${pos.coords.longitude}`);
+        const { sunrise, sunset } = res.weather;
+        const now = new Date();
+        const cur = now.getHours() * 60 + now.getMinutes();
+        const parse = (t) => { const [h, m] = t.split(':').map(Number); return h * 60 + m; };
+        isDay = cur >= parse(sunrise) && cur < parse(sunset);
+        console.log(`Auto Appearance: isDay=${isDay}`);
+    } catch (err) {
+        console.warn('Auto appearance fallback to system preference:', err);
+        isDay = window.matchMedia('(prefers-color-scheme: light)').matches;
     }
 
-    if (mode === 'dark') {
-        document.documentElement.setAttribute('data-theme', 'dark');
-    } else {
-        document.documentElement.removeAttribute('data-theme');
-    }
+    document.documentElement.setAttribute('data-theme', isDay ? 'light' : 'dark');
 }
 
 function setupNavigation() {
@@ -141,29 +115,38 @@ function setupNavigation() {
     });
 }
 
-// ── Theme Toggle ───────────────────────────────────────────
+// ── Theme Toggle (3-way: auto → light → dark → auto) ───────
 
 function initThemeControls() {
     const btn = document.getElementById('theme-toggle-btn');
     if (!btn) return;
+    const current = localStorage.getItem('lumina_theme') || 'auto';
+    btn.setAttribute('data-mode', current);
     btn.onclick = toggleTheme;
 }
 
 function toggleTheme() {
-    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-    if (isDark) {
-        document.documentElement.removeAttribute('data-theme');
-        localStorage.setItem('lumina_theme', 'light');
-    } else {
+    const btn = document.getElementById('theme-toggle-btn');
+    const current = localStorage.getItem('lumina_theme') || 'auto';
+    const next = current === 'auto' ? 'light' : current === 'light' ? 'dark' : 'auto';
+    localStorage.setItem('lumina_theme', next);
+    if (btn) btn.setAttribute('data-mode', next);
+
+    if (next === 'light') {
+        document.documentElement.setAttribute('data-theme', 'light');
+    } else if (next === 'dark') {
         document.documentElement.setAttribute('data-theme', 'dark');
-        localStorage.setItem('lumina_theme', 'dark');
+    } else {
+        // Auto: apply system preference immediately; sunrise/sunset runs on next load
+        const prefersDark = !window.matchMedia('(prefers-color-scheme: light)').matches;
+        document.documentElement.setAttribute('data-theme', prefersDark ? 'dark' : 'light');
     }
 }
 
 // ── BG Color Picker ────────────────────────────────────────
 
 function initBgControls() {
-    const savedBg = localStorage.getItem('lumina_bg') || 'default';
+    const savedBg = localStorage.getItem('lumina_bg') || 'forest';
     applyBg(savedBg);
 
     const btn     = document.getElementById('bg-picker-btn');
