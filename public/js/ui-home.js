@@ -173,13 +173,25 @@ async function saveImage(url) {
     }
 }
 
-function setWallpaper(url) {
+async function setWallpaper(url) {
     if (!url) return;
-    // Triggers the iOS Shortcut named "Set Wallpaper" passing the image URL as input.
-    // Create a Shortcut on your iPhone: receive input as text → Get Contents of URL → Set Wallpaper Photo
-    const shortcutName = encodeURIComponent('Set Wallpaper');
-    const encoded = encodeURIComponent(url);
-    window.location.href = `shortcuts://run-shortcut?name=${shortcutName}&input=text&text=${encoded}`;
+    try {
+        // Fetch the already-generated image blob so we send the exact image,
+        // not the URL (which would re-generate a different image)
+        const res = await fetch(url);
+        const blob = await res.blob();
+        const file = new File([blob], 'lumina-neo-wallpaper.jpg', { type: blob.type || 'image/jpeg' });
+
+        if (navigator.canShare && navigator.canShare({ files: [file] })) {
+            // Share the image file — on iOS, pick Shortcuts from the share sheet.
+            // The Shortcut receives the actual image file, so just needs: Set Wallpaper Photo
+            await navigator.share({ files: [file], title: 'Set as Wallpaper' });
+        } else {
+            alert('Wallpaper sharing is not supported on this device/browser.');
+        }
+    } catch (err) {
+        if (err.name !== 'AbortError') alert('Set wallpaper failed: ' + err.message);
+    }
 }
 
 function formatDebug(debug) {
