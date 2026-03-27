@@ -66,8 +66,9 @@ export function renderLogin(onSuccess) {
             
             // Login Success
             AppState.userId = data.userId;
-            AppState.passkey = passkey; // keep in memory for authenticated requests
-            AppState.save(); // Persist
+            AppState.passkey = passkey;
+            sessionStorage.setItem('passkey', passkey); // persist for session lifetime
+            AppState.save(); // Persist userId to localStorage
             
             // Cleanup and Callback
             modal.remove();

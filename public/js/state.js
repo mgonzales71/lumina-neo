@@ -2,7 +2,7 @@
 export const AppState = {
     userId: localStorage.getItem('userId') || null,
     profileId: localStorage.getItem('profileId') || null,
-    passkey: null, // held in memory only, never persisted
+    passkey: sessionStorage.getItem('passkey') || null, // session only, cleared on tab/window close
     currentProfile: null,
     activeTab: 'home',
     lastGenerated: JSON.parse(localStorage.getItem('lastGenerated') || '{}'),
