@@ -109,15 +109,19 @@ function setupNavigation() {
     navButtons.forEach(btn => {
         const newBtn = btn.cloneNode(true);
         btn.parentNode.replaceChild(newBtn, btn);
-        
+
         newBtn.addEventListener('click', () => {
             const tabId = newBtn.getAttribute('data-tab');
             document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
             newBtn.classList.add('active');
+            // Scroll active tab into view in the bottom bar
+            newBtn.scrollIntoView({ inline: 'center', behavior: 'smooth', block: 'nearest' });
             tabPanes.forEach(pane => pane.classList.remove('active'));
             const targetPane = document.getElementById(`${tabId}-tab`);
             if (targetPane) {
                 targetPane.classList.add('active');
+                // Scroll content back to top on tab switch
+                document.getElementById('tab-content').scrollTop = 0;
                 loadTabContent(tabId);
             }
         });

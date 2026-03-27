@@ -2,98 +2,130 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <title>Lumina Neo</title>
     <link rel="stylesheet" href="css/main.css">
 </head>
 <body>
-    <!-- Liquid Background Effect -->
+    <!-- Liquid Background -->
     <div class="liquid-bg">
-        <div class="liquid-blob"></div>
-        <div class="liquid-blob"></div>
-        <div class="liquid-blob"></div>
+        <div class="blob blob-1"></div>
+        <div class="blob blob-2"></div>
+        <div class="blob blob-3"></div>
+        <div class="blob blob-4"></div>
+        <div class="blob blob-5"></div>
     </div>
 
     <div id="app">
+        <!-- Compact Top Header -->
         <header class="app-header">
             <div class="logo">Lumina Neo</div>
-            <nav class="main-nav">
-                <button class="nav-btn active" data-tab="home">Home</button>
-                <button class="nav-btn" data-tab="locations">Locations</button>
-                <button class="nav-btn" data-tab="poi">POI</button>
-                <button class="nav-btn" data-tab="themes">Themes</button>
-                <button class="nav-btn" data-tab="styles">Styles</button>
-                <button class="nav-btn" data-tab="prompts">Prompts</button>
-                <button class="nav-btn" data-tab="sizes">Sizes</button>
-                <button class="nav-btn" data-tab="providers">Providers</button>
-                <button class="nav-btn" data-tab="profiles">Profiles</button>
-            </nav>
         </header>
 
+        <!-- Scrollable Content -->
         <main id="tab-content" class="tab-content">
-            <!-- Dynamic Content Loaded Here -->
             <div id="home-tab" class="tab-pane active">
-                <div class="card">
-                    <h1>Welcome to Lumina Neo</h1>
-                    <p>Connecting to your creative space...</p>
-                </div>
+                <div class="card"><p>Loading...</p></div>
             </div>
             <div id="locations-tab" class="tab-pane">
-                <div class="card">
-                    <h2>Locations</h2>
-                    <p>Manage your locations here.</p>
-                </div>
+                <div class="card"><p>Loading...</p></div>
             </div>
             <div id="poi-tab" class="tab-pane">
-                <div class="card">
-                    <h2>Points of Interest</h2>
-                    <p>Select a location to manage POIs.</p>
-                </div>
+                <div class="card"><p>Loading...</p></div>
             </div>
             <div id="themes-tab" class="tab-pane">
-                <div class="card">
-                    <h2>Themes</h2>
-                    <p>Configure seasonal themes.</p>
-                </div>
+                <div class="card"><p>Loading...</p></div>
             </div>
             <div id="styles-tab" class="tab-pane">
-                <div class="card">
-                    <h2>Styles</h2>
-                    <p>Define artistic styles.</p>
-                </div>
+                <div class="card"><p>Loading...</p></div>
             </div>
             <div id="prompts-tab" class="tab-pane">
-                <div class="card">
-                    <h2>Prompts</h2>
-                    <p>Edit prompt templates.</p>
-                </div>
+                <div class="card"><p>Loading...</p></div>
             </div>
             <div id="sizes-tab" class="tab-pane">
-                <div class="card">
-                    <h2>Image Sizes</h2>
-                    <p>Manage output resolutions.</p>
-                </div>
+                <div class="card"><p>Loading...</p></div>
             </div>
             <div id="providers-tab" class="tab-pane">
-                <div class="card">
-                    <h2>AI Providers</h2>
-                    <p>Configure API keys and models.</p>
-                </div>
+                <div class="card"><p>Loading...</p></div>
             </div>
             <div id="profiles-tab" class="tab-pane">
-                <div class="card">
-                    <h2>Profiles</h2>
-                    <p>Manage user profiles and settings.</p>
-                </div>
+                <div class="card"><p>Loading...</p></div>
             </div>
         </main>
 
-        <footer class="app-footer">
-            <p>&copy; 2026 Lumina Neo - Version: v1.3.1</p>
-        </footer>
+        <!-- Bottom Tab Bar -->
+        <nav class="main-nav">
+            <button class="nav-btn active" data-tab="home">
+                <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M3 9.5L12 3l9 6.5V20a1 1 0 01-1 1H4a1 1 0 01-1-1z"/>
+                    <path d="M9 21V12h6v9"/>
+                </svg>
+                <span>Home</span>
+            </button>
+            <button class="nav-btn" data-tab="locations">
+                <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12 2C8.686 2 6 4.686 6 8c0 4.5 6 12 6 12s6-7.5 6-12c0-3.314-2.686-6-6-6z"/>
+                    <circle cx="12" cy="8" r="2"/>
+                </svg>
+                <span>Locations</span>
+            </button>
+            <button class="nav-btn" data-tab="poi">
+                <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                    <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+                </svg>
+                <span>POI</span>
+            </button>
+            <button class="nav-btn" data-tab="prompts">
+                <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/>
+                </svg>
+                <span>Prompts</span>
+            </button>
+            <button class="nav-btn" data-tab="styles">
+                <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="13.5" cy="6.5" r="2.5"/>
+                    <circle cx="17.5" cy="10.5" r="2.5"/>
+                    <circle cx="8.5" cy="7.5" r="2.5"/>
+                    <circle cx="6.5" cy="12.5" r="2.5"/>
+                    <path d="M12 22a9.96 9.96 0 01-8-16"/>
+                </svg>
+                <span>Styles</span>
+            </button>
+            <button class="nav-btn" data-tab="themes">
+                <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="5"/>
+                    <line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/>
+                    <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+                    <line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/>
+                    <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+                </svg>
+                <span>Themes</span>
+            </button>
+            <button class="nav-btn" data-tab="providers">
+                <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                    <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
+                </svg>
+                <span>AI</span>
+            </button>
+            <button class="nav-btn" data-tab="sizes">
+                <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/>
+                    <line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/>
+                </svg>
+                <span>Sizes</span>
+            </button>
+            <button class="nav-btn" data-tab="profiles">
+                <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/>
+                    <circle cx="12" cy="7" r="4"/>
+                </svg>
+                <span>Profile</span>
+            </button>
+        </nav>
     </div>
 
-    <!-- Scripts -->
     <script type="module" src="js/app.js"></script>
 </body>
 </html>
