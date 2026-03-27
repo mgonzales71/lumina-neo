@@ -1,15 +1,16 @@
 /* ============================================================
-   Lumina Neo — Liquid Glass UI  v1.6.1
+   Lumina Neo — Liquid Glass UI  v1.6.2
    Inspired by GlassKit (glasskit.jungherz.com)
    Aurora background system + theme/color picker
    ============================================================ */
 
 /* ── Design Tokens ────────────────────────────────────────── */
 :root {
-    /* Brand */
+    /* Brand — default blue/indigo */
     --primary:        #007AFF;
-    --primary-dim:    rgba(0, 122, 255, 0.18);
-    --primary-glow:   rgba(0, 122, 255, 0.32);
+    --primary-rgb:    0, 122, 255;
+    --primary-dim:    rgba(var(--primary-rgb), 0.18);
+    --primary-glow:   rgba(var(--primary-rgb), 0.32);
     --accent:         #BF5AF2;
     --success:        #30D158;
     --warning:        #FF9F0A;
@@ -37,53 +38,52 @@
 
     /* Tab bar */
     --tab-bar-height: 58px;
-    --primary-rgb: 0, 122, 255;
 
-    /* ── Glass (dark — default) ── */
-    --body-bg:        #0d1117;
-    --glass-bg:       rgba(18, 24, 38, 0.82);
-    --glass-bg-heavy: rgba(14, 19, 30, 0.94);
-    --glass-border:   rgba(255, 255, 255, 0.08);
-    --glass-sheen:    rgba(255, 255, 255, 0.10);
-    --glass-shadow:   0 4px 24px rgba(0, 0, 0, 0.55),
-                      0 1px  4px rgba(0, 0, 0, 0.35);
-    --glass-blur:     blur(24px) saturate(140%);
+    /* ── Glass (dark — default) — smoke glass: more translucent ── */
+    --body-bg:        #131c2e;
+    --glass-bg:       rgba(22, 32, 52, 0.58);
+    --glass-bg-heavy: rgba(18, 26, 44, 0.78);
+    --glass-border:   rgba(255, 255, 255, 0.10);
+    --glass-sheen:    rgba(255, 255, 255, 0.13);
+    --glass-shadow:   0 4px 24px rgba(0, 0, 0, 0.50),
+                      0 1px  4px rgba(0, 0, 0, 0.30);
+    --glass-blur:     blur(28px) saturate(160%);
 
-    /* Text — dark */
-    --text-h:   #dde4f0;
-    --text-1:   #c8d0e0;
-    --text-2:   #8896ab;
-    --text-3:   #4e5b6e;
+    /* Text — dark (brighter whites for contrast over smoke glass) */
+    --text-h:   #eaf0fc;
+    --text-1:   #d4dcec;
+    --text-2:   #96a8be;
+    --text-3:   #5e6e84;
 
-    --input-bg:     rgba(255, 255, 255, 0.055);
-    --input-border: rgba(255, 255, 255, 0.09);
+    --input-bg:     rgba(255, 255, 255, 0.07);
+    --input-border: rgba(255, 255, 255, 0.10);
 
-    --nav-bg:     rgba(11, 15, 24, 0.92);
-    --nav-border: rgba(255, 255, 255, 0.07);
+    --nav-bg:     rgba(14, 20, 34, 0.82);
+    --nav-border: rgba(255, 255, 255, 0.08);
 
     /* ── Buttons (dark) ── */
     --btn-grad:   linear-gradient(140deg, #007AFF 0%, #5856D6 100%);
-    --btn-glow:   0 4px 18px rgba(0, 90, 200, 0.45);
-    --btn-ghost-bg:           rgba(255, 255, 255, 0.06);
-    --btn-ghost-border:       rgba(255, 255, 255, 0.11);
-    --btn-ghost-hover:        rgba(0, 122, 255, 0.14);
-    --btn-ghost-hover-border: rgba(0, 122, 255, 0.28);
+    --btn-glow:   0 4px 18px rgba(var(--primary-rgb), 0.45);
+    --btn-ghost-bg:           rgba(255, 255, 255, 0.07);
+    --btn-ghost-border:       rgba(255, 255, 255, 0.12);
+    --btn-ghost-hover:        rgba(var(--primary-rgb), 0.14);
+    --btn-ghost-hover-border: rgba(var(--primary-rgb), 0.30);
 
     /* ── Aurora gradient colors (dark default: blue/purple/rose) ── */
-    --au-1: rgba(26, 79, 255, 0.32);
-    --au-2: rgba(191, 90, 242, 0.26);
-    --au-3: rgba(255, 90, 90, 0.16);
+    --au-1: rgba(26, 79, 255, 0.42);
+    --au-2: rgba(191, 90, 242, 0.34);
+    --au-3: rgba(255, 90, 90, 0.22);
 }
 
 [data-theme="light"] {
     --body-bg:        #f0f4f8;
-    --glass-bg:       rgba(255, 255, 255, 0.82);
-    --glass-bg-heavy: rgba(255, 255, 255, 0.96);
-    --glass-border:   rgba(180, 195, 215, 0.55);
+    --glass-bg:       rgba(255, 255, 255, 0.62);
+    --glass-bg-heavy: rgba(255, 255, 255, 0.80);
+    --glass-border:   rgba(160, 180, 210, 0.50);
     --glass-sheen:    rgba(255, 255, 255, 1.0);
     --glass-shadow:   0 4px 20px rgba(30, 50, 90, 0.10),
                       0 1px  4px rgba(30, 50, 90, 0.06);
-    --glass-blur:     blur(24px) saturate(120%);
+    --glass-blur:     blur(28px) saturate(140%);
 
     /* Text — light */
     --text-h:  #1a2636;
@@ -94,40 +94,70 @@
     --input-bg:     rgba(30, 50, 90, 0.05);
     --input-border: rgba(30, 50, 90, 0.13);
 
-    --nav-bg:     rgba(235, 240, 248, 0.94);
+    --nav-bg:     rgba(235, 240, 248, 0.78);
     --nav-border: rgba(30, 50, 90, 0.09);
 
     --btn-ghost-bg:           rgba(30, 50, 90, 0.05);
     --btn-ghost-border:       rgba(30, 50, 90, 0.13);
-    --btn-ghost-hover:        rgba(0, 122, 255, 0.09);
-    --btn-ghost-hover-border: rgba(0, 122, 255, 0.25);
+    --btn-ghost-hover:        rgba(var(--primary-rgb), 0.09);
+    --btn-ghost-hover-border: rgba(var(--primary-rgb), 0.25);
 
     /* ── Aurora (light default) ── */
-    --au-1: rgba(26, 79, 255, 0.16);
-    --au-2: rgba(191, 90, 242, 0.13);
-    --au-3: rgba(255, 90, 90, 0.09);
+    --au-1: rgba(26, 79, 255, 0.22);
+    --au-2: rgba(191, 90, 242, 0.18);
+    --au-3: rgba(255, 90, 90, 0.12);
 }
 
 /* ── Aurora Color Presets ─────────────────────────────────── */
 /* Ocean */
-[data-bg="ocean"]                         { --au-1:rgba(0,184,216,.32); --au-2:rgba(0,119,182,.28); --au-3:rgba(30,213,255,.20); }
-[data-bg="ocean"][data-theme="light"]     { --au-1:rgba(0,184,216,.18); --au-2:rgba(0,119,182,.15); --au-3:rgba(30,213,255,.11); }
+[data-bg="ocean"]                         { --au-1:rgba(0,184,216,.42); --au-2:rgba(0,119,182,.36); --au-3:rgba(30,213,255,.26); }
+[data-bg="ocean"][data-theme="light"]     { --au-1:rgba(0,184,216,.24); --au-2:rgba(0,119,182,.20); --au-3:rgba(30,213,255,.14); }
 
 /* Sunset */
-[data-bg="sunset"]                        { --au-1:rgba(255,140,0,.30); --au-2:rgba(255,60,100,.26); --au-3:rgba(150,60,200,.20); }
-[data-bg="sunset"][data-theme="light"]    { --au-1:rgba(255,140,0,.18); --au-2:rgba(255,60,100,.15); --au-3:rgba(150,60,200,.12); }
+[data-bg="sunset"]                        { --au-1:rgba(255,140,0,.40); --au-2:rgba(255,60,100,.34); --au-3:rgba(150,60,200,.26); }
+[data-bg="sunset"][data-theme="light"]    { --au-1:rgba(255,140,0,.24); --au-2:rgba(255,60,100,.20); --au-3:rgba(150,60,200,.15); }
 
 /* Forest */
-[data-bg="forest"]                        { --au-1:rgba(0,200,120,.28); --au-2:rgba(0,160,100,.26); --au-3:rgba(80,220,160,.18); }
-[data-bg="forest"][data-theme="light"]    { --au-1:rgba(0,200,120,.16); --au-2:rgba(0,160,100,.14); --au-3:rgba(80,220,160,.10); }
+[data-bg="forest"]                        { --au-1:rgba(0,200,120,.38); --au-2:rgba(0,160,100,.34); --au-3:rgba(80,220,160,.24); }
+[data-bg="forest"][data-theme="light"]    { --au-1:rgba(0,200,120,.22); --au-2:rgba(0,160,100,.18); --au-3:rgba(80,220,160,.13); }
 
 /* Rose */
-[data-bg="rose"]                          { --au-1:rgba(255,100,160,.28); --au-2:rgba(255,60,120,.26); --au-3:rgba(180,100,220,.20); }
-[data-bg="rose"][data-theme="light"]      { --au-1:rgba(255,100,160,.18); --au-2:rgba(255,60,120,.15); --au-3:rgba(180,100,220,.12); }
+[data-bg="rose"]                          { --au-1:rgba(255,100,160,.38); --au-2:rgba(255,60,120,.34); --au-3:rgba(180,100,220,.26); }
+[data-bg="rose"][data-theme="light"]      { --au-1:rgba(255,100,160,.22); --au-2:rgba(255,60,120,.18); --au-3:rgba(180,100,220,.15); }
 
 /* Mono */
-[data-bg="mono"]                          { --au-1:rgba(100,130,180,.20); --au-2:rgba(80,100,140,.16); --au-3:rgba(60,80,120,.13); }
-[data-bg="mono"][data-theme="light"]      { --au-1:rgba(100,130,180,.12); --au-2:rgba(80,100,140,.09); --au-3:rgba(60,80,120,.07); }
+[data-bg="mono"]                          { --au-1:rgba(100,130,180,.28); --au-2:rgba(80,100,140,.22); --au-3:rgba(60,80,120,.18); }
+[data-bg="mono"][data-theme="light"]      { --au-1:rgba(100,130,180,.16); --au-2:rgba(80,100,140,.12); --au-3:rgba(60,80,120,.09); }
+
+/* ── Per-Preset Accent Colors ─────────────────────────────── */
+/* These override --primary and derived vars so buttons, badges,
+   chips, nav active, focus rings, etc. all tint to the chosen palette */
+
+[data-bg="ocean"] {
+    --primary:     #00B4D8;
+    --primary-rgb: 0, 180, 216;
+    --btn-grad:    linear-gradient(140deg, #00B4D8 0%, #0096C7 100%);
+}
+[data-bg="sunset"] {
+    --primary:     #FF8500;
+    --primary-rgb: 255, 133, 0;
+    --btn-grad:    linear-gradient(140deg, #FF8500 0%, #FF3C64 100%);
+}
+[data-bg="forest"] {
+    --primary:     #00C878;
+    --primary-rgb: 0, 200, 120;
+    --btn-grad:    linear-gradient(140deg, #00C878 0%, #00A060 100%);
+}
+[data-bg="rose"] {
+    --primary:     #FF5FA0;
+    --primary-rgb: 255, 95, 160;
+    --btn-grad:    linear-gradient(140deg, #FF5FA0 0%, #B460DC 100%);
+}
+[data-bg="mono"] {
+    --primary:     #7090C8;
+    --primary-rgb: 112, 144, 200;
+    --btn-grad:    linear-gradient(140deg, #7090C8 0%, #5060A0 100%);
+}
 
 /* ── Reset ────────────────────────────────────────────────── */
 *, *::before, *::after {
@@ -161,7 +191,7 @@ body {
         radial-gradient(ellipse 65% 70% at 50% 92%,  var(--au-3) 0%, transparent 65%),
         var(--body-bg);
     transition: background 0.5s ease;
-    animation: aurora-float 22s ease-in-out infinite alternate;
+    animation: aurora-float 13s ease-in-out infinite alternate;
     will-change: transform;
 }
 @keyframes aurora-float {
@@ -474,7 +504,7 @@ input, select, textarea {
 input:focus, select:focus, textarea:focus {
     outline: none;
     border-color: var(--primary);
-    background: rgba(0,122,255,0.06);
+    background: rgba(var(--primary-rgb), 0.06);
     box-shadow: 0 0 0 3px var(--primary-dim);
 }
 select {
@@ -546,7 +576,7 @@ code, .code-snippet {
     color: var(--primary);
     padding: 2px 6px;
     border-radius: var(--r-sm);
-    border: 0.5px solid rgba(0,122,255,0.2);
+    border: 0.5px solid rgba(var(--primary-rgb), 0.2);
 }
 
 /* ── Badges ───────────────────────────────────────────────── */
@@ -561,7 +591,7 @@ code, .code-snippet {
     vertical-align: middle;
     background: var(--primary-dim);
     color: var(--primary);
-    border: 0.5px solid rgba(0,122,255,0.25);
+    border: 0.5px solid rgba(var(--primary-rgb), 0.25);
 }
 
 /* ── Action Row ───────────────────────────────────────────── */
@@ -659,7 +689,7 @@ code, .code-snippet {
 /* ── Variable Chips (prompt builder) ─────────────────────── */
 .var-chip {
     background: var(--primary-dim) !important;
-    border: 0.5px solid rgba(0,122,255,0.25) !important;
+    border: 0.5px solid rgba(var(--primary-rgb), 0.25) !important;
     color: var(--primary) !important;
     border-radius: var(--r-sm) !important;
     padding: 3px 9px !important;
@@ -669,7 +699,7 @@ code, .code-snippet {
     line-height: 1.6;
     transition: background var(--dur-fast), transform var(--dur-fast);
 }
-.var-chip:hover  { background: rgba(0,122,255,0.26) !important; transform: translateY(-1px); }
+.var-chip:hover  { background: rgba(var(--primary-rgb), 0.26) !important; transform: translateY(-1px); }
 .var-chip:active { transform: scale(0.94); }
 
 /* ── Desktop ──────────────────────────────────────────────── */
