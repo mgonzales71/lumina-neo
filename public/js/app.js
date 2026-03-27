@@ -1,6 +1,6 @@
 /**
  * Lumina Neo Frontend
- * Version: v1.1.4
+ * Version: v1.1.5
  * SPA application bootstrapping and navigation
  */
 import { renderHome } from './ui-home.js';
@@ -27,6 +27,8 @@ async function initApp() {
         await loadProfile();
         await applyAppearance();
         setupNavigation();
+        initThemeControls();
+        initBgControls();
         renderHome();
     } catch (err) {
         console.error('Initialization failed:', err);
@@ -55,6 +57,17 @@ async function loadProfile() {
 }
 
 export async function applyAppearance() {
+    // Respect manual theme override — set via theme toggle button
+    const themeOverride = localStorage.getItem('lumina_theme');
+    if (themeOverride) {
+        if (themeOverride === 'dark') {
+            document.documentElement.setAttribute('data-theme', 'dark');
+        } else {
+            document.documentElement.removeAttribute('data-theme');
+        }
+        return;
+    }
+
     const profile = AppState.currentProfile;
     if (!profile) return;
 
@@ -125,6 +138,66 @@ function setupNavigation() {
                 loadTabContent(tabId);
             }
         });
+    });
+}
+
+// ── Theme Toggle ───────────────────────────────────────────
+
+function initThemeControls() {
+    const btn = document.getElementById('theme-toggle-btn');
+    if (!btn) return;
+    btn.onclick = toggleTheme;
+}
+
+function toggleTheme() {
+    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+    if (isDark) {
+        document.documentElement.removeAttribute('data-theme');
+        localStorage.setItem('lumina_theme', 'light');
+    } else {
+        document.documentElement.setAttribute('data-theme', 'dark');
+        localStorage.setItem('lumina_theme', 'dark');
+    }
+}
+
+// ── BG Color Picker ────────────────────────────────────────
+
+function initBgControls() {
+    const savedBg = localStorage.getItem('lumina_bg') || 'default';
+    applyBg(savedBg);
+
+    const btn     = document.getElementById('bg-picker-btn');
+    const popover = document.getElementById('bg-popover');
+    if (!btn || !popover) return;
+
+    btn.onclick = (e) => {
+        e.stopPropagation();
+        popover.classList.toggle('open');
+    };
+
+    // Close on outside tap — register only once
+    if (!window._bgPopoverBound) {
+        window._bgPopoverBound = true;
+        document.addEventListener('click', () => {
+            document.getElementById('bg-popover')?.classList.remove('open');
+        });
+    }
+
+    document.querySelectorAll('.bg-swatch').forEach(swatch => {
+        swatch.onclick = (e) => {
+            e.stopPropagation();
+            const bg = swatch.getAttribute('data-bg');
+            applyBg(bg);
+            localStorage.setItem('lumina_bg', bg);
+            popover.classList.remove('open');
+        };
+    });
+}
+
+function applyBg(bgId) {
+    document.documentElement.setAttribute('data-bg', bgId);
+    document.querySelectorAll('.bg-swatch').forEach(s => {
+        s.classList.toggle('active', s.getAttribute('data-bg') === bgId);
     });
 }
 

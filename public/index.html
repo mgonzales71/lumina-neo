@@ -9,19 +9,53 @@
     <link rel="stylesheet" href="css/main.css">
 </head>
 <body>
-    <!-- Liquid Background -->
-    <div class="liquid-bg">
-        <div class="blob blob-1"></div>
-        <div class="blob blob-2"></div>
-        <div class="blob blob-3"></div>
-        <div class="blob blob-4"></div>
-        <div class="blob blob-5"></div>
-    </div>
+    <!-- Aurora Background -->
+    <div class="aurora-bg" id="aurora-bg"></div>
 
     <div id="app">
-        <!-- Compact Top Header -->
+        <!-- Top Header -->
         <header class="app-header">
-            <div class="logo">Lumina Neo</div>
+            <!-- Theme Toggle -->
+            <div class="header-side">
+                <button id="theme-toggle-btn" class="header-btn theme-toggle" aria-label="Toggle theme">
+                    <svg class="icon-sun" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="5"/>
+                        <line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/>
+                        <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+                        <line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/>
+                        <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+                    </svg>
+                    <svg class="icon-moon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/>
+                    </svg>
+                </button>
+            </div>
+
+            <!-- Logo -->
+            <div class="header-center">
+                <div class="logo">Lumina Neo</div>
+            </div>
+
+            <!-- BG Color Picker -->
+            <div class="header-side right">
+                <div class="bg-picker-wrap">
+                    <button id="bg-picker-btn" class="header-btn" aria-label="Change background color">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="13.5" cy="6.5" r="2.5"/><circle cx="17.5" cy="10.5" r="2.5"/>
+                            <circle cx="8.5" cy="7.5" r="2.5"/><circle cx="6.5" cy="12.5" r="2.5"/>
+                            <path d="M12 22a9.96 9.96 0 01-8-16"/>
+                        </svg>
+                    </button>
+                    <div id="bg-popover" class="bg-popover">
+                        <button class="bg-swatch" data-bg="default" title="Default"></button>
+                        <button class="bg-swatch" data-bg="ocean"   title="Ocean"></button>
+                        <button class="bg-swatch" data-bg="sunset"  title="Sunset"></button>
+                        <button class="bg-swatch" data-bg="forest"  title="Forest"></button>
+                        <button class="bg-swatch" data-bg="rose"    title="Rose"></button>
+                        <button class="bg-swatch" data-bg="mono"    title="Mono"></button>
+                    </div>
+                </div>
+            </div>
         </header>
 
         <!-- Scrollable Content -->
