@@ -39,55 +39,66 @@
     --primary-rgb: 0, 122, 255;
 
     /* ── Glass (dark — default) ── */
-    --glass-bg:       rgba(10, 14, 26, 0.52);
-    --glass-bg-heavy: rgba(10, 14, 26, 0.72);
-    --glass-border:   rgba(255, 255, 255, 0.09);
-    --glass-sheen:    rgba(255, 255, 255, 0.11);
-    --glass-shadow:   0 8px 32px rgba(0, 0, 0, 0.45);
-    --glass-blur:     blur(28px) saturate(160%);
+    /* Rich dark navy base ensures text always reads against solid color,
+       blobs add ambiance without killing contrast (GlassKit approach) */
+    --body-bg:        #0d1117;
+    --glass-bg:       rgba(18, 24, 38, 0.82);
+    --glass-bg-heavy: rgba(14, 19, 30, 0.94);
+    --glass-border:   rgba(255, 255, 255, 0.08);
+    --glass-sheen:    rgba(255, 255, 255, 0.10);
+    --glass-shadow:   0 4px 24px rgba(0, 0, 0, 0.55),
+                      0 1px  4px rgba(0, 0, 0, 0.35);
+    --glass-blur:     blur(24px) saturate(140%);
 
-    --text-h:   #f2f2f7;
-    --text-1:   #e5e5ea;
-    --text-2:   #aeaeb2;
-    --text-3:   #636366;
+    /* High-contrast text against dark navy — same palette as GlassKit dark */
+    --text-h:   #dde4f0;
+    --text-1:   #c8d0e0;
+    --text-2:   #8896ab;
+    --text-3:   #4e5b6e;
 
-    --input-bg:    rgba(255, 255, 255, 0.06);
-    --input-border: rgba(255, 255, 255, 0.1);
+    --input-bg:     rgba(255, 255, 255, 0.055);
+    --input-border: rgba(255, 255, 255, 0.09);
 
-    --nav-bg:  rgba(8, 12, 22, 0.75);
-    --nav-border: rgba(255, 255, 255, 0.08);
+    --nav-bg:     rgba(11, 15, 24, 0.92);
+    --nav-border: rgba(255, 255, 255, 0.07);
 
     /* ── Buttons (dark) ── */
     --btn-grad:   linear-gradient(140deg, #007AFF 0%, #5856D6 100%);
     --btn-glow:   0 4px 18px rgba(0, 90, 200, 0.45);
-    --btn-ghost-bg:     rgba(255, 255, 255, 0.07);
-    --btn-ghost-border: rgba(255, 255, 255, 0.13);
-    --btn-ghost-hover:  rgba(0, 122, 255, 0.14);
+    --btn-ghost-bg:           rgba(255, 255, 255, 0.06);
+    --btn-ghost-border:       rgba(255, 255, 255, 0.11);
+    --btn-ghost-hover:        rgba(0, 122, 255, 0.14);
     --btn-ghost-hover-border: rgba(0, 122, 255, 0.28);
 }
 
 [data-theme="light"] {
-    --glass-bg:       rgba(255, 255, 255, 0.52);
-    --glass-bg-heavy: rgba(255, 255, 255, 0.78);
-    --glass-border:   rgba(255, 255, 255, 0.72);
-    --glass-sheen:    rgba(255, 255, 255, 0.95);
-    --glass-shadow:   0 8px 28px rgba(0, 0, 0, 0.10);
+    /* Light blue-gray base (GlassKit's exact #f0f4f8) —
+       blobs become soft pastels via multiply blend + low opacity */
+    --body-bg:        #f0f4f8;
+    --glass-bg:       rgba(255, 255, 255, 0.82);
+    --glass-bg-heavy: rgba(255, 255, 255, 0.96);
+    --glass-border:   rgba(180, 195, 215, 0.55);
+    --glass-sheen:    rgba(255, 255, 255, 1.0);
+    --glass-shadow:   0 4px 20px rgba(30, 50, 90, 0.10),
+                      0 1px  4px rgba(30, 50, 90, 0.06);
+    --glass-blur:     blur(24px) saturate(120%);
 
-    --text-h:  #1c1c1e;
-    --text-1:  #2c2c2e;
-    --text-2:  #48484a;
-    --text-3:  #8e8e93;
+    /* GlassKit light text: dark navy on light bg for WCAG AA */
+    --text-h:  #1a2636;
+    --text-1:  #2a3a4e;
+    --text-2:  #4a5e72;
+    --text-3:  #8099b0;
 
-    --input-bg:     rgba(0, 0, 0, 0.04);
-    --input-border: rgba(0, 0, 0, 0.10);
+    --input-bg:     rgba(30, 50, 90, 0.05);
+    --input-border: rgba(30, 50, 90, 0.13);
 
-    --nav-bg:     rgba(240, 243, 250, 0.78);
-    --nav-border: rgba(0, 0, 0, 0.07);
+    --nav-bg:     rgba(235, 240, 248, 0.94);
+    --nav-border: rgba(30, 50, 90, 0.09);
 
-    --btn-ghost-bg:     rgba(0, 0, 0, 0.04);
-    --btn-ghost-border: rgba(0, 0, 0, 0.10);
-    --btn-ghost-hover:  rgba(0, 122, 255, 0.08);
-    --btn-ghost-hover-border: rgba(0, 122, 255, 0.22);
+    --btn-ghost-bg:           rgba(30, 50, 90, 0.05);
+    --btn-ghost-border:       rgba(30, 50, 90, 0.13);
+    --btn-ghost-hover:        rgba(0, 122, 255, 0.09);
+    --btn-ghost-hover-border: rgba(0, 122, 255, 0.25);
 }
 
 /* ── Reset ────────────────────────────────────────────────── */
@@ -103,7 +114,8 @@ body {
     font-size: 15px;
     line-height: 1.6;
     color: var(--text-1);
-    background: #080c18;
+    background: var(--body-bg);
+    transition: background 0.4s ease, color 0.3s ease;
     min-height: 100dvh;
     overflow-x: hidden;
     overscroll-behavior: none;
@@ -117,13 +129,24 @@ body {
     filter: blur(80px);
     pointer-events: none;
     will-change: transform;
+    transition: filter 0.4s ease, opacity 0.4s ease;
 }
 .blob {
     position: absolute;
     border-radius: 50%;
-    opacity: 0.65;
+    /* Dark mode: screen blend — vivid colors glow through dark bg */
+    opacity: 0.45;
     mix-blend-mode: screen;
     animation: blob-drift linear infinite alternate;
+}
+
+/* Light mode: multiply blend makes blobs soft pastels on white bg */
+[data-theme="light"] .liquid-bg {
+    filter: blur(80px) saturate(70%);
+}
+[data-theme="light"] .blob {
+    opacity: 0.30;
+    mix-blend-mode: multiply;
 }
 .blob-1 { width:70vw;height:70vw; background:radial-gradient(circle at 40% 40%,#1a6fff,#003baa 55%,transparent); top:0;left:-5%; animation-duration:22s; }
 .blob-2 { width:55vw;height:55vw; background:radial-gradient(circle at 60% 40%,#bf5af2,#7b2fff 55%,transparent); top:10%;right:-5%; animation-duration:27s; animation-delay:-9s; }
