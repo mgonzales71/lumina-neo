@@ -160,23 +160,27 @@ function renderCategoryConfig(providerId, categoryName, def, userConf, dynamicMo
         nonModelFields.forEach(field => {
             const val = userConf.defaults[field.key] !== undefined ? userConf.defaults[field.key] : '';
             const label = field.key.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
-            html += `<div class="form-group"><label>${label}</label>`;
-            if (field.type === 'select') {
-                html += `<select class="config-default-field" data-provider="${providerId}" data-category="${categoryName}" data-key="${field.key}">`;
-                field.options.forEach(opt => {
-                    html += `<option value="${opt}" ${val == opt ? 'selected' : ''}>${opt}</option>`;
-                });
-                html += `</select>`;
-            } else if (field.type === 'boolean') {
+            if (field.type === 'boolean') {
+                // No outer <label> — use id/for to avoid cross-activation between sibling checkboxes
+                const inputId = `chk-${providerId}-${categoryName}-${field.key}`;
                 const checked = val === true || val === 'true';
-                html += `<label style="display:flex; align-items:center; gap:10px; cursor:pointer;">
-                    <input type="checkbox" class="config-default-field" data-provider="${providerId}" data-category="${categoryName}" data-key="${field.key}" ${checked ? 'checked' : ''} style="width:18px; height:18px; cursor:pointer;">
-                    <span style="font-size:0.85rem; opacity:0.8;">${label}</span>
-                </label>`;
+                html += `<div class="form-group" style="flex-direction:row; align-items:center; gap:10px; padding:4px 0;">
+                    <input type="checkbox" id="${inputId}" class="config-default-field" data-provider="${providerId}" data-category="${categoryName}" data-key="${field.key}" ${checked ? 'checked' : ''} style="width:18px; height:18px; cursor:pointer; flex-shrink:0; accent-color:var(--primary);">
+                    <label for="${inputId}" style="cursor:pointer; font-size:0.9rem; margin:0; font-weight:normal; opacity:0.9;">${label}</label>
+                </div>`;
             } else {
-                html += `<input type="${field.type === 'number' ? 'number' : 'text'}" class="config-default-field" data-provider="${providerId}" data-category="${categoryName}" data-key="${field.key}" value="${val}" placeholder="${field.key === 'negative_prompt' ? 'worst quality, blurry' : ''}">`;
+                html += `<div class="form-group"><label>${label}</label>`;
+                if (field.type === 'select') {
+                    html += `<select class="config-default-field" data-provider="${providerId}" data-category="${categoryName}" data-key="${field.key}">`;
+                    field.options.forEach(opt => {
+                        html += `<option value="${opt}" ${val == opt ? 'selected' : ''}>${opt}</option>`;
+                    });
+                    html += `</select>`;
+                } else {
+                    html += `<input type="${field.type === 'number' ? 'number' : 'text'}" class="config-default-field" data-provider="${providerId}" data-category="${categoryName}" data-key="${field.key}" value="${val}" placeholder="${field.key === 'negative_prompt' ? 'worst quality, blurry' : ''}">`;
+                }
+                html += `</div>`;
             }
-            html += `</div>`;
         });
         html += `</div></details>`;
     }

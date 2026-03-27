@@ -193,11 +193,15 @@ async function doGenerate(lat, lon, btn, btnLabel, overlay, imgContainer, debugC
             deviceSize: { width: targetWidth, height: targetHeight }
         }, {}, currentAbortController.signal);
 
-        // Insert generated image
+        // Insert generated image — keep overlay active until pixels are loaded
         Array.from(imgContainer.children).forEach(c => { if (c.id !== 'loading-overlay') c.remove(); });
         const img = document.createElement('img');
-        img.src = response.imageUrl;
         img.alt = 'Generated image';
+        const imageLoaded = new Promise(resolve => {
+            img.onload  = resolve;
+            img.onerror = resolve; // dismiss overlay even on load failure
+        });
+        img.src = response.imageUrl;
         imgContainer.insertBefore(img, overlay);
 
         // Show actions
@@ -214,6 +218,9 @@ async function doGenerate(lat, lon, btn, btnLabel, overlay, imgContainer, debugC
 
         AppState.lastGenerated = response;
         AppState.save();
+
+        // Wait for the image bytes to arrive before dismissing the overlay
+        await imageLoaded;
 
     } catch (err) {
         if (err.name !== 'AbortError') {
