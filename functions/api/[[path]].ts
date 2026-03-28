@@ -1,6 +1,6 @@
 /**
  * Lumina Neo Pages Functions API Entry Point
- * Version: v1.5.0
+ * Version: v1.5.1
  */
 import { Env, ApiResponse, UserRecord, ProfileSettings, LocationEntry, POIEntry, PromptVariables } from '../src/types';
 import { PROVIDER_REGISTRY } from '../src/providers';
@@ -677,7 +677,7 @@ async function handleGenerateImage(request: Request, env: Env): Promise<Response
 
 async function handleShortcutsGenerate(request: Request, env: Env): Promise<Response> {
     const body = await request.json() as any;
-    const { userId, passkey, profileId, lat, lon } = body;
+    const { userId, passkey, profileId, lat, lon, deviceWidth, deviceHeight } = body;
 
     try {
         await authenticateUser(env, userId, passkey);
@@ -686,11 +686,16 @@ async function handleShortcutsGenerate(request: Request, env: Env): Promise<Resp
     }
 
     try {
+        const deviceSize = (deviceWidth && deviceHeight)
+            ? { width: Number(deviceWidth), height: Number(deviceHeight) }
+            : undefined;
+
         const result = await generateImagePipeline(env, {
             userId,
             profileId,
             lat,
-            lon
+            lon,
+            deviceSize
         });
 
         return jsonResponse({

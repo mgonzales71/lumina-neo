@@ -132,6 +132,7 @@ export interface ImageSize {
   mode: ImageMode;
   width: number | null;
   height: number | null;
+  depthEffect?: boolean;  // iOS depth/parallax effect — pads dimensions by 10%
 }
 
 export interface ImageSizeConfig {

@@ -167,14 +167,32 @@ export async function generateImagePipeline(env: Env, params: PipelineParams): P
     // 9. Size
     let width = 1024;
     let height = 1024;
-    const sizeConfig = profile.imageSizes.sizes[profile.activeImageSizeId];
+    const activeSizeId = profile.activeImageSizeId || profile.imageSizes.default || 'DEVICE';
+    const sizeConfig = profile.imageSizes.sizes[activeSizeId];
     if (sizeConfig) {
-        if (sizeConfig.mode === 'dynamic' && deviceSize) {
-            width = deviceSize.width;
+        if (sizeConfig.mode === 'dynamic') {
+            if (!deviceSize) {
+                throw new Error('Active size is "This Device" but no device dimensions were provided. The iOS Shortcut must pass deviceWidth and deviceHeight.');
+            }
+            // Cap unknown device dimensions — arbitrary screen sizes shouldn't generate huge images
+            const MAX_DIM = 2048;
+            width  = deviceSize.width;
             height = deviceSize.height;
+            if (width > MAX_DIM || height > MAX_DIM) {
+                const ratio = width / height;
+                if (ratio > 1) { width = MAX_DIM; height = Math.round(MAX_DIM / ratio); }
+                else           { height = MAX_DIM; width  = Math.round(MAX_DIM * ratio); }
+            }
         } else if (sizeConfig.mode === 'preset') {
             width = sizeConfig.width!;
             height = sizeConfig.height!;
+        }
+
+        // iOS depth/parallax effect: pad by 10% so the parallax shift has ~5% headroom per edge.
+        // No size cap here — preset dimensions are intentional and must not be silently shrunk.
+        if (sizeConfig.depthEffect) {
+            width  = Math.round(width  * 1.10);
+            height = Math.round(height * 1.10);
         }
     }
 
@@ -197,6 +215,8 @@ export async function generateImagePipeline(env: Env, params: PipelineParams): P
         const defaults = providerSettings.image?.defaults || {};
 
         let extraParams = '';
+        if (defaults.nologo !== false) extraParams += '&nologo=true';
+        if (defaults.private === true || defaults.private === 'true') extraParams += '&private=true';
         if (defaults.enhance === true || defaults.enhance === 'true') extraParams += '&enhance=true';
         if (defaults.safe === true || defaults.safe === 'true') extraParams += '&safe=true';
         if (defaults.transparent === true || defaults.transparent === 'true') extraParams += '&transparent=true';
@@ -207,7 +227,7 @@ export async function generateImagePipeline(env: Env, params: PipelineParams): P
             extraParams += `&negative_prompt=${encodeURIComponent(String(defaults.negative_prompt))}`;
         }
 
-        imageUrl = `https://gen.pollinations.ai/image/${encodedPrompt}?width=${width}&height=${height}&model=${model}&seed=${seed}&nologo=true${extraParams}${keyParam}`;
+        imageUrl = `https://gen.pollinations.ai/image/${encodedPrompt}?width=${width}&height=${height}&model=${model}&seed=${seed}${extraParams}${keyParam}`;
     } else {
         imageUrl = 'https://via.placeholder.com/1024x1024?text=Other+Provider';
     }

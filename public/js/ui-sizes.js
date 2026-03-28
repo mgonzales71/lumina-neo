@@ -2,13 +2,36 @@ import { AppState } from './state.js';
 import { fetchApi } from './api.js';
 import { exportData, importData } from './utils.js';
 
-let currentEditingSizeId = null; 
+let currentEditingSizeId = null;
 
-export function renderSizes() {
+const STANDARD_SIZES = {
+    'DEVICE':         { label: 'This Device',    mode: 'dynamic', width: null,  height: null  },
+    'IPHONE':         { label: 'iPhone',          mode: 'preset',  width: 1179,  height: 2556  },
+    'IPHONE_PRO':     { label: 'iPhone Pro',      mode: 'preset',  width: 1206,  height: 2622  },
+    'IPHONE_PRO_MAX': { label: 'iPhone Pro Max',  mode: 'preset',  width: 1320,  height: 2868  },
+    'IPAD':           { label: 'iPad',            mode: 'preset',  width: 2064,  height: 2752  },
+    'DESKTOP':        { label: 'Desktop',         mode: 'preset',  width: 1920,  height: 1080  },
+    'SQUARE':         { label: 'Square',          mode: 'preset',  width: 2048,  height: 2048  },
+};
+
+export async function renderSizes() {
     const container = document.getElementById('sizes-tab');
     const profile = AppState.currentProfile;
+
+    // Ensure imageSizes exists
     if (!profile.imageSizes) {
-        profile.imageSizes = { default: 'DEVICE', sizes: { 'DEVICE': { label: 'This Device', mode: 'dynamic', width: null, height: null } } };
+        profile.imageSizes = { default: 'DEVICE', sizes: {} };
+    }
+
+    // One-time migration: if IPHONE is missing this is an old profile — backfill all standard presets once.
+    // After this runs once, users can permanently delete any preset they don't want.
+    if (!profile.imageSizes.sizes['IPHONE']) {
+        for (const [key, preset] of Object.entries(STANDARD_SIZES)) {
+            if (!profile.imageSizes.sizes[key]) {
+                profile.imageSizes.sizes[key] = preset;
+            }
+        }
+        await saveProfile(profile);
     }
 
     const sizes = profile.imageSizes.sizes;
@@ -34,17 +57,26 @@ export function renderSizes() {
 
             <ul id="size-list" style="list-style: none; padding: 0;">
                 ${Object.entries(sizes).map(([key, size]) => `
-                    <li style="background: rgba(255,255,255,0.05); border-radius: 12px; padding: 15px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; border: 1px solid var(--glass-border);">
-                        <div>
-                            <div style="font-size: 1.1rem; font-weight: 600;">${size.label}</div>
-                            <div style="font-size: 0.9rem; color: var(--text-secondary);">
-                                ${size.mode === 'dynamic' ? 'Dynamic (Device Screen)' : `${size.width}x${size.height}`}
+                    <li style="background: rgba(255,255,255,0.05); border-radius: 12px; padding: 15px; margin-bottom: 10px; border: 1px solid var(--glass-border);">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <div>
+                                <div style="font-size: 1.1rem; font-weight: 600;">${size.label}</div>
+                                <div style="font-size: 0.9rem; color: var(--text-secondary);">
+                                    ${size.mode === 'dynamic' ? 'Dynamic (Device Screen)' : `${size.width}×${size.height}${size.depthEffect ? ` → ${Math.round(size.width * 1.1)}×${Math.round(size.height * 1.1)} w/ depth` : ''}`}
+                                </div>
+                            </div>
+                            <div style="display:flex; gap: 8px;">
+                                ${key !== 'DEVICE' ? `<button class="btn btn-secondary btn-sm edit-size-btn" data-key="${key}" style="padding: 8px 12px; font-size: 0.85rem;">Edit</button>` : ''}
+                                ${key !== 'DEVICE' ? `<button class="btn btn-danger btn-sm delete-size-btn" data-key="${key}" style="padding: 8px 12px; font-size: 0.85rem;">Delete</button>` : ''}
                             </div>
                         </div>
-                        <div style="display:flex; gap: 8px;">
-                            ${key !== 'DEVICE' ? `<button class="btn btn-secondary btn-sm edit-size-btn" data-key="${key}" style="padding: 8px 12px; font-size: 0.85rem;">Edit</button>` : ''}
-                            ${key !== 'DEVICE' ? `<button class="btn btn-danger btn-sm delete-size-btn" data-key="${key}" style="padding: 8px 12px; font-size: 0.85rem;">Delete</button>` : ''}
-                        </div>
+                        ${size.mode === 'preset' ? `
+                        <div style="margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--glass-border);">
+                            <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 0.9rem; color: var(--text-secondary);">
+                                <input type="checkbox" class="depth-effect-toggle" data-key="${key}" ${size.depthEffect ? 'checked' : ''} style="width: 16px; height: 16px; cursor: pointer;">
+                                Adjust for iOS depth effect <span style="opacity: 0.6;">(+10% each dimension)</span>
+                            </label>
+                        </div>` : ''}
                     </li>
                 `).join('')}
             </ul>
@@ -78,6 +110,12 @@ export function renderSizes() {
                         <input type="number" id="size-height" placeholder="1920">
                     </div>
                 </div>
+                <div class="form-group">
+                    <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                        <input type="checkbox" id="size-depth-effect" style="width: 16px; height: 16px; cursor: pointer;">
+                        Adjust for iOS depth effect <span style="opacity: 0.6; font-size: 0.85rem;">(+10% each dimension)</span>
+                    </label>
+                </div>
             </div>
             <div style="display: flex; gap: 10px;">
                 <button id="save-size-btn" class="btn" style="flex:1;">Add Size</button>
@@ -91,6 +129,7 @@ export function renderSizes() {
     // Event Listeners
     document.getElementById('default-size-select').addEventListener('change', async (e) => {
         profile.imageSizes.default = e.target.value;
+        profile.activeImageSizeId = e.target.value;
         await saveProfile(profile);
     });
 
@@ -108,10 +147,22 @@ export function renderSizes() {
             const key = e.target.dataset.key;
             delete profile.imageSizes.sizes[key];
             if (profile.imageSizes.default === key) {
-                profile.imageSizes.default = 'DEVICE'; // Fallback
+                profile.imageSizes.default = 'DEVICE';
+            }
+            if (profile.activeImageSizeId === key) {
+                profile.activeImageSizeId = 'DEVICE';
             }
             await saveProfile(profile);
-            renderSizes();
+            await renderSizes();
+        });
+    });
+
+    document.querySelectorAll('.depth-effect-toggle').forEach(checkbox => {
+        checkbox.addEventListener('change', async (e) => {
+            const key = e.target.dataset.key;
+            profile.imageSizes.sizes[key].depthEffect = e.target.checked;
+            await saveProfile(profile);
+            await renderSizes();
         });
     });
 
@@ -119,17 +170,18 @@ export function renderSizes() {
         btn.addEventListener('click', (e) => {
             const key = e.target.dataset.key;
             const sizeToEdit = profile.imageSizes.sizes[key];
-            
+
             document.getElementById('size-id').value = key;
-            document.getElementById('size-id').disabled = true; 
+            document.getElementById('size-id').disabled = true;
             document.getElementById('size-label').value = sizeToEdit.label;
             document.getElementById('size-mode').value = sizeToEdit.mode;
-            
+
             const isPreset = sizeToEdit.mode === 'preset';
             dimensionsGroup.style.display = isPreset ? 'block' : 'none';
             document.getElementById('size-width').value = sizeToEdit.width || '';
             document.getElementById('size-height').value = sizeToEdit.height || '';
-            
+            document.getElementById('size-depth-effect').checked = sizeToEdit.depthEffect || false;
+
             document.getElementById('size-form-title').textContent = 'Edit Image Size';
             document.getElementById('save-size-btn').textContent = 'Update Size';
             document.getElementById('cancel-size-edit-btn').style.display = 'block';
@@ -151,7 +203,7 @@ export function renderSizes() {
             return;
         }
 
-        let width = null, height = null;
+        let width = null, height = null, depthEffect = false;
         if (mode === 'preset') {
             width = parseInt(document.getElementById('size-width').value);
             height = parseInt(document.getElementById('size-height').value);
@@ -159,13 +211,15 @@ export function renderSizes() {
                 alert('Width and Height must be valid numbers for preset mode.');
                 return;
             }
+            depthEffect = document.getElementById('size-depth-effect').checked;
         }
 
         const newSize = {
             label,
             mode,
             width,
-            height
+            height,
+            depthEffect
         };
 
         if (currentEditingSizeId !== null) {
@@ -180,7 +234,7 @@ export function renderSizes() {
         
         await saveProfile(profile);
         resetSizeForm();
-        renderSizes();
+        await renderSizes();
     });
 
     document.getElementById('export-sizes-btn').addEventListener('click', () => {
@@ -213,7 +267,7 @@ export function renderSizes() {
             }
 
             await saveProfile(profile);
-            renderSizes();
+            await renderSizes();
             alert('Image sizes imported successfully!');
         } catch (err) {
             alert('Error importing image sizes: ' + err.message);
@@ -230,6 +284,7 @@ function resetSizeForm() {
     document.getElementById('dimensions-group').style.display = 'block';
     document.getElementById('size-width').value = '';
     document.getElementById('size-height').value = '';
+    document.getElementById('size-depth-effect').checked = false;
     document.getElementById('size-form-title').textContent = 'Add New Size';
     document.getElementById('save-size-btn').textContent = 'Add Size';
     document.getElementById('cancel-size-edit-btn').style.display = 'none';
