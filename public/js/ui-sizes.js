@@ -4,6 +4,14 @@ import { exportData, importData } from './utils.js';
 
 let currentEditingSizeId = null;
 
+function setDepthEffectBtn(btn, active) {
+    btn.classList.toggle('toggle-on', active);
+    btn.textContent = active ? 'ON' : 'OFF';
+    btn.style.border = `1.5px solid ${active ? 'var(--primary)' : 'var(--glass-border)'}`;
+    btn.style.background = active ? 'rgba(var(--primary-rgb),0.2)' : 'rgba(255,255,255,0.05)';
+    btn.style.color = active ? 'var(--primary)' : 'var(--text-secondary)';
+}
+
 const STANDARD_SIZES = {
     'DEVICE':         { label: 'This Device',    mode: 'dynamic', width: null,  height: null  },
     'IPHONE':         { label: 'iPhone',          mode: 'preset',  width: 1179,  height: 2556  },
@@ -65,18 +73,18 @@ export async function renderSizes() {
                                     ${size.mode === 'dynamic' ? 'Dynamic (Device Screen)' : `${size.width}×${size.height}${size.depthEffect ? ` → ${Math.round(size.width * 1.1)}×${Math.round(size.height * 1.1)} w/ depth` : ''}`}
                                 </div>
                             </div>
-                            <div style="display:flex; gap: 8px;">
+                            <div style="display:flex; gap: 8px; align-items: center;">
+                                ${size.mode === 'preset' ? `<button class="depth-effect-btn ${size.depthEffect ? 'toggle-on' : ''}" data-key="${key}" style="
+                                    min-width:64px; padding:5px 12px; border-radius:20px; font-size:0.78rem; font-weight:600;
+                                    border:1.5px solid ${size.depthEffect ? 'var(--primary)' : 'var(--glass-border)'};
+                                    background:${size.depthEffect ? 'rgba(var(--primary-rgb),0.2)' : 'rgba(255,255,255,0.05)'};
+                                    color:${size.depthEffect ? 'var(--primary)' : 'var(--text-secondary)'};
+                                    cursor:pointer; transition:all 0.2s; white-space:nowrap;
+                                ">Depth ${size.depthEffect ? 'ON' : 'OFF'}</button>` : ''}
                                 ${key !== 'DEVICE' ? `<button class="btn btn-secondary btn-sm edit-size-btn" data-key="${key}" style="padding: 8px 12px; font-size: 0.85rem;">Edit</button>` : ''}
                                 ${key !== 'DEVICE' ? `<button class="btn btn-danger btn-sm delete-size-btn" data-key="${key}" style="padding: 8px 12px; font-size: 0.85rem;">Delete</button>` : ''}
                             </div>
                         </div>
-                        ${size.mode === 'preset' ? `
-                        <div style="margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--glass-border);">
-                            <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 0.9rem; color: var(--text-secondary);">
-                                <input type="checkbox" class="depth-effect-toggle" data-key="${key}" ${size.depthEffect ? 'checked' : ''} style="width: 16px; height: 16px; cursor: pointer;">
-                                Adjust for iOS depth effect <span style="opacity: 0.6;">(+10% each dimension)</span>
-                            </label>
-                        </div>` : ''}
                     </li>
                 `).join('')}
             </ul>
@@ -110,11 +118,15 @@ export async function renderSizes() {
                         <input type="number" id="size-height" placeholder="1920">
                     </div>
                 </div>
-                <div class="form-group">
-                    <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
-                        <input type="checkbox" id="size-depth-effect" style="width: 16px; height: 16px; cursor: pointer;">
-                        Adjust for iOS depth effect <span style="opacity: 0.6; font-size: 0.85rem;">(+10% each dimension)</span>
-                    </label>
+                <div class="form-group" style="display:flex; justify-content:space-between; align-items:center; padding:6px 0;">
+                    <span style="font-size:0.9rem; opacity:0.85;">iOS Depth Effect <span style="opacity:0.6; font-size:0.8rem;">(+10% each dimension)</span></span>
+                    <button type="button" id="size-depth-effect" style="
+                        min-width:58px; padding:5px 12px; border-radius:20px; font-size:0.8rem; font-weight:600;
+                        border:1.5px solid var(--glass-border);
+                        background:rgba(255,255,255,0.05);
+                        color:var(--text-secondary);
+                        cursor:pointer; transition:all 0.2s;
+                    ">OFF</button>
                 </div>
             </div>
             <div style="display: flex; gap: 10px;">
@@ -157,10 +169,11 @@ export async function renderSizes() {
         });
     });
 
-    document.querySelectorAll('.depth-effect-toggle').forEach(checkbox => {
-        checkbox.addEventListener('change', async (e) => {
-            const key = e.target.dataset.key;
-            profile.imageSizes.sizes[key].depthEffect = e.target.checked;
+    document.querySelectorAll('.depth-effect-btn').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+            const key = e.currentTarget.dataset.key;
+            const newVal = !profile.imageSizes.sizes[key].depthEffect;
+            profile.imageSizes.sizes[key].depthEffect = newVal;
             await saveProfile(profile);
             await renderSizes();
         });
@@ -180,7 +193,7 @@ export async function renderSizes() {
             dimensionsGroup.style.display = isPreset ? 'block' : 'none';
             document.getElementById('size-width').value = sizeToEdit.width || '';
             document.getElementById('size-height').value = sizeToEdit.height || '';
-            document.getElementById('size-depth-effect').checked = sizeToEdit.depthEffect || false;
+            setDepthEffectBtn(document.getElementById('size-depth-effect'), sizeToEdit.depthEffect || false);
 
             document.getElementById('size-form-title').textContent = 'Edit Image Size';
             document.getElementById('save-size-btn').textContent = 'Update Size';
@@ -191,6 +204,11 @@ export async function renderSizes() {
 
     document.getElementById('cancel-size-edit-btn').addEventListener('click', () => {
         resetSizeForm();
+    });
+
+    document.getElementById('size-depth-effect').addEventListener('click', (e) => {
+        const btn = e.currentTarget;
+        setDepthEffectBtn(btn, !btn.classList.contains('toggle-on'));
     });
 
     document.getElementById('save-size-btn').addEventListener('click', async () => {
@@ -211,7 +229,7 @@ export async function renderSizes() {
                 alert('Width and Height must be valid numbers for preset mode.');
                 return;
             }
-            depthEffect = document.getElementById('size-depth-effect').checked;
+            depthEffect = document.getElementById('size-depth-effect').classList.contains('toggle-on');
         }
 
         const newSize = {
@@ -284,7 +302,7 @@ function resetSizeForm() {
     document.getElementById('dimensions-group').style.display = 'block';
     document.getElementById('size-width').value = '';
     document.getElementById('size-height').value = '';
-    document.getElementById('size-depth-effect').checked = false;
+    setDepthEffectBtn(document.getElementById('size-depth-effect'), false);
     document.getElementById('size-form-title').textContent = 'Add New Size';
     document.getElementById('save-size-btn').textContent = 'Add Size';
     document.getElementById('cancel-size-edit-btn').style.display = 'none';
