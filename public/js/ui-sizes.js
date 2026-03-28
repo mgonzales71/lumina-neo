@@ -7,9 +7,6 @@ let currentEditingSizeId = null;
 function setDepthEffectBtn(btn, active) {
     btn.classList.toggle('toggle-on', active);
     btn.textContent = active ? 'ON' : 'OFF';
-    btn.style.border = `1.5px solid ${active ? 'var(--primary)' : 'var(--glass-border)'}`;
-    btn.style.background = active ? 'rgba(var(--primary-rgb),0.2)' : 'rgba(255,255,255,0.05)';
-    btn.style.color = active ? 'var(--primary)' : 'var(--text-secondary)';
 }
 
 const STANDARD_SIZES = {
@@ -74,13 +71,7 @@ export async function renderSizes() {
                                 </div>
                             </div>
                             <div style="display:flex; gap: 8px; align-items: center;">
-                                ${size.mode === 'preset' ? `<button class="depth-effect-btn ${size.depthEffect ? 'toggle-on' : ''}" data-key="${key}" style="
-                                    min-width:64px; padding:5px 12px; border-radius:20px; font-size:0.78rem; font-weight:600;
-                                    border:1.5px solid ${size.depthEffect ? 'var(--primary)' : 'var(--glass-border)'};
-                                    background:${size.depthEffect ? 'rgba(var(--primary-rgb),0.2)' : 'rgba(255,255,255,0.05)'};
-                                    color:${size.depthEffect ? 'var(--primary)' : 'var(--text-secondary)'};
-                                    cursor:pointer; transition:all 0.2s; white-space:nowrap;
-                                ">Depth ${size.depthEffect ? 'ON' : 'OFF'}</button>` : ''}
+                                ${size.mode === 'preset' ? `<button class="depth-effect-btn ${size.depthEffect ? 'toggle-on' : ''}" data-key="${key}">Depth ${size.depthEffect ? 'ON' : 'OFF'}</button>` : ''}
                                 ${key !== 'DEVICE' ? `<button class="btn btn-secondary btn-sm edit-size-btn" data-key="${key}" style="padding: 8px 12px; font-size: 0.85rem;">Edit</button>` : ''}
                                 ${key !== 'DEVICE' ? `<button class="btn btn-danger btn-sm delete-size-btn" data-key="${key}" style="padding: 8px 12px; font-size: 0.85rem;">Delete</button>` : ''}
                             </div>
@@ -120,13 +111,7 @@ export async function renderSizes() {
                 </div>
                 <div class="form-group" style="display:flex; justify-content:space-between; align-items:center; padding:6px 0;">
                     <span style="font-size:0.9rem; opacity:0.85;">iOS Depth Effect <span style="opacity:0.6; font-size:0.8rem;">(+10% each dimension)</span></span>
-                    <button type="button" id="size-depth-effect" style="
-                        min-width:58px; padding:5px 12px; border-radius:20px; font-size:0.8rem; font-weight:600;
-                        border:1.5px solid var(--glass-border);
-                        background:rgba(255,255,255,0.05);
-                        color:var(--text-secondary);
-                        cursor:pointer; transition:all 0.2s;
-                    ">OFF</button>
+                    <button type="button" id="size-depth-effect" class="depth-effect-btn">OFF</button>
                 </div>
             </div>
             <div style="display: flex; gap: 10px;">
