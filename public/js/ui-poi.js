@@ -31,11 +31,11 @@ export function renderPOI() {
                 <button id="export-pois-btn" class="btn btn-secondary" style="flex:1;">Export POIs</button>
                 <button id="import-pois-btn" class="btn btn-secondary" style="flex:1;">Import POIs</button>
             </div>
-            <div style="display: flex; gap: 10px; margin-bottom: 1rem;">
-                <button id="refresh-poi-btn" class="btn">Regenerate via AI</button>
-                <button id="add-poi-btn" class="btn btn-secondary">Add Manually</button>
-                <button id="save-poi-btn" class="btn">Save Changes</button>
+            <div style="display: flex; gap: 10px; margin-bottom: 8px;">
+                <button id="refresh-poi-btn" class="btn" style="flex:1;">Regenerate via AI</button>
+                <button id="add-poi-btn" class="btn btn-secondary" style="flex:1;">Add Manually</button>
             </div>
+            <button id="save-poi-btn" class="btn" style="width:100%; margin-bottom: 1rem;">Save Changes</button>
         </div>
 
         <div class="card">

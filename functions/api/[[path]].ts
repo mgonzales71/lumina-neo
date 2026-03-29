@@ -164,6 +164,13 @@ export const onRequest: PagesFunction<Env> = async (context) => {
     if (url.pathname === '/api/locations/sanitize' && method === 'POST') {
       return await handleSanitizeLocation(request, env);
     }
+    if (url.pathname === '/api/poi/count' && method === 'GET') {
+      const locationId = url.searchParams.get('locationId');
+      if (!locationId) return errorResponse('INVALID_INPUT', 'locationId required');
+      const pois = await env.KV_POI.get<POIEntry[]>(`POI:${locationId}`, 'json');
+      const count = Array.isArray(pois) ? pois.length : 0;
+      return jsonResponse({ ok: true, data: { locationId, count } });
+    }
     if (url.pathname === '/api/poi/populate' && method === 'POST') {
       return await handlePopulatePOI(request, env);
     }
