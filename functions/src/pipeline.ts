@@ -49,7 +49,9 @@ export async function generateImagePipeline(env: Env, params: PipelineParams): P
     if (!pois || pois.length === 0) {
         pois = await generateAndCachePOIs(env, profile, poiKey, geo.city, geo.state, geo.country);
     }
-    const selectedPOI = pois[Math.floor(Math.random() * pois.length)];
+    const rndPOI = new Uint32Array(1);
+    crypto.getRandomValues(rndPOI);
+    const selectedPOI = pois[rndPOI[0] % pois.length];
 
     // 4. Weather & Moon
     const [weather, moon] = await Promise.all([
@@ -230,7 +232,9 @@ export async function generateImagePipeline(env: Env, params: PipelineParams): P
 
     let imageUrl = '';
     const model = providerSettings.image?.selectedModel || 'flux';
-    const seed = Math.floor(Math.random() * 1000000);
+    const rndSeed = new Uint32Array(1);
+    crypto.getRandomValues(rndSeed);
+    const seed = rndSeed[0] % 1000000;
 
     if (providerId === 'pollinations') {
         const encodedPrompt = encodeURIComponent(finalPrompt);
