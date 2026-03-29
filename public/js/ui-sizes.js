@@ -73,7 +73,7 @@ export async function renderSizes() {
                             <div style="display:flex; gap: 8px; align-items: center;">
                                 ${size.mode === 'preset' ? `<button class="depth-effect-btn ${size.depthEffect ? 'toggle-on' : ''}" data-key="${key}">Depth ${size.depthEffect ? 'ON' : 'OFF'}</button>` : ''}
                                 ${key !== 'DEVICE' ? `<button class="btn btn-secondary btn-sm edit-size-btn" data-key="${key}" style="padding: 8px 12px; font-size: 0.85rem;">Edit</button>` : ''}
-                                ${key !== 'DEVICE' ? `<button class="btn btn-danger btn-sm delete-size-btn" data-key="${key}" style="padding: 8px 12px; font-size: 0.85rem;">Delete</button>` : ''}
+                                ${key !== 'DEVICE' ? `<button class="btn btn-danger btn-sm delete-size-btn" data-key="${key}" title="Delete" style="padding:8px 10px; font-size:0.95rem; line-height:1;">&times;</button>` : ''}
                             </div>
                         </div>
                     </li>

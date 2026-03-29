@@ -24,15 +24,7 @@ export function renderStyles() {
                     return `
                     <li style="background: rgba(255,255,255,0.05); border-radius: 12px; padding: 14px 14px 14px 12px; margin-bottom: 10px; display: flex; align-items: center; gap: 12px; border: 1px solid ${isActive ? 'var(--primary)' : 'var(--glass-border)'};">
                         <!-- Active circle toggle -->
-                        <button class="set-active-style-btn" data-index="${index}" title="${isActive ? 'Active' : 'Set Active'}" style="
-                            flex-shrink: 0;
-                            width: 28px; height: 28px; border-radius: 50%;
-                            border: 2px solid ${isActive ? 'var(--primary)' : 'rgba(255,255,255,0.25)'};
-                            background: ${isActive ? 'var(--primary)' : 'transparent'};
-                            display: flex; align-items: center; justify-content: center;
-                            cursor: ${isActive ? 'default' : 'pointer'};
-                            transition: all 0.2s; padding: 0;
-                        ">
+                        <button class="circle-select-btn set-active-style-btn ${isActive ? 'is-active' : ''}" data-index="${index}" title="${isActive ? 'Active' : 'Set Active'}">
                             ${isActive ? `<svg width="14" height="14" viewBox="0 0 14 14" fill="none"><polyline points="2,7 5.5,10.5 12,3.5" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>` : ''}
                         </button>
                         <!-- Name + description -->

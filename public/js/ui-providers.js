@@ -65,7 +65,7 @@ export async function renderProviders() {
         html += `
             <div class="card">
                 <div style="display: flex; justify-content: space-between; align-items: center;">
-                    <h3>${def.label} <a href="${def.docsUrl}" target="_blank" style="font-size: 0.8rem;">(Docs)</a></h3>
+                    <h3>${def.label} <a href="${def.docsUrl}" target="_blank" class="provider-docs-link">(Docs)</a></h3>
                     <button class="provider-enable-btn ${userConf.enabled ? 'toggle-on' : ''}" data-id="${def.id}" style="
                         min-width:58px; padding:5px 12px; border-radius:20px; font-size:0.8rem; font-weight:600;
                         border:1.5px solid ${userConf.enabled ? 'var(--primary)' : 'var(--glass-border)'};

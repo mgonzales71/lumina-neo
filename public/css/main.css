@@ -608,6 +608,36 @@ textarea { resize: vertical; min-height: 76px; }
     }
 }
 
+/* ── Style active-select circle ──────────────────────────── */
+.circle-select-btn {
+    flex-shrink: 0;
+    width: 28px; height: 28px; border-radius: 50%;
+    border: 2px solid var(--circle-inactive-border, rgba(100,120,160,0.45));
+    background: transparent;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s; padding: 0;
+}
+.circle-select-btn.is-active {
+    border-color: var(--primary);
+    background: var(--primary);
+    cursor: default;
+}
+[data-theme="light"] .circle-select-btn {
+    border-color: rgba(30, 50, 90, 0.30);
+}
+
+/* ── Provider docs link ───────────────────────────────────── */
+.provider-docs-link {
+    font-size: 0.8rem;
+    color: var(--primary);
+    opacity: 0.75;
+    text-decoration: none;
+    transition: opacity 0.15s;
+}
+.provider-docs-link:visited { color: var(--primary); opacity: 0.55; }
+.provider-docs-link:hover   { opacity: 1; text-decoration: underline; }
+
 /* ── Pill toggle (Depth Effect, Enhance, etc.) ────────────── */
 .depth-effect-btn {
     min-width: 64px;
