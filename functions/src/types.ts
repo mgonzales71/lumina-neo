@@ -42,15 +42,26 @@ export interface PromptVariables {
     | "noon" | "afternoon" | "sunset" | "late_night";
 
   // Weather
-  weather: string;               // Short: "Light rain", "Overcast", etc.
-  weather_descriptive: string;   // Long: "Light rain with gentle steady rainfall and glistening wet surfaces"
-  precipitation_chance: number;
+  weather: string;                 // Short: "Light rain", "Overcast", etc.
+  weather_descriptive: string;     // Long sentence description, day/night aware
+  precipitation_chance: number;    // % chance of precipitation today
+  precipitation_type: string;      // "rain" | "snow" | "wintry mix" | "freezing rain" | "drizzle" | "thunderstorm" | "none"
   temperature_f: number;
+  apparent_temperature_f: number;  // feels-like temperature
   wind_speed_mph: number;
+  wind_gusts_mph: number;
+  wind_direction: string;          // compass: "N", "NW", "SSE", etc.
   visibility_mi: number;
   cloud_cover_pct: number;
   uv_index: number;
   sun_strength: "low" | "medium" | "high";
+  humidity_pct: number;
+  dew_point_f: number;
+  snow_depth_in: number;           // snow currently on the ground (inches)
+  light_quality: string;           // "Soft diffuse light" | "Bright direct sunlight" | etc.
+  frost_risk: boolean;             // dew point ≤ 36°F
+  rainbow_potential: boolean;      // daytime + precipitation + partial cloud
+  heat_shimmer: boolean;           // apparent temp ≥ 95°F + low humidity
 
   // Sun / moon
   sunrise: string;           // local HH:MM

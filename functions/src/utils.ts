@@ -42,43 +42,86 @@ export async function reverseGeocode(lat: number, lon: number) {
  */
 export async function getWeather(lat: number, lon: number) {
   try {
-    const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,precipitation,weather_code,cloud_cover,wind_speed_10m,visibility,uv_index&daily=sunrise,sunset,precipitation_probability_max&temperature_unit=fahrenheit&wind_speed_unit=mph&precipitation_unit=inch&timezone=auto&forecast_days=1`;
+    const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}`
+      + `&current=temperature_2m,apparent_temperature,relative_humidity_2m,dew_point_2m`
+      + `,precipitation,rain,snowfall,weather_code,cloud_cover`
+      + `,wind_speed_10m,wind_gusts_10m,wind_direction_10m`
+      + `,visibility,uv_index,is_day,shortwave_radiation`
+      + `&daily=sunrise,sunset,precipitation_probability_max`
+      + `&hourly=snow_depth`
+      + `&temperature_unit=fahrenheit&wind_speed_unit=mph&precipitation_unit=inch`
+      + `&timezone=auto&forecast_days=1`;
 
     const response = await fetch(url);
     const data = await response.json() as any;
     const current = data.current || {};
-    const daily = data.daily || {};
+    const daily   = data.daily   || {};
     const utcOffsetSeconds: number = data.utc_offset_seconds || 0;
 
+    // Snow depth: hourly array, index by current local hour
+    const localHour = Math.floor((Date.now() / 1000 + utcOffsetSeconds) / 3600) % 24;
+    const snowDepthM: number = (data.hourly?.snow_depth || [])[localHour] || 0;
+
     return {
-      weatherCode: current.weather_code as number,
-      precip: current.precipitation || 0,
-      precipChance: daily.precipitation_probability_max?.[0] || 0,
-      tempF: Math.round(current.temperature_2m || 0),
-      windSpeed: Math.round(current.wind_speed_10m || 0),
-      visibility: Math.round((current.visibility || 0) / 1609.34), // meters to miles
-      cloudCover: current.cloud_cover || 0,
-      uvIndex: current.uv_index || 0,
-      sunrise: daily.sunrise?.[0]?.split('T')?.[1] || '06:00',
-      sunset: daily.sunset?.[0]?.split('T')?.[1] || '18:00',
+      weatherCode:      current.weather_code        as number,
+      isDay:            current.is_day === 1,
+      precip:           current.precipitation        || 0,
+      rain:             current.rain                 || 0,
+      snowfall:         current.snowfall             || 0,
+      snowDepthIn:      Math.round(snowDepthM * 39.3701 * 10) / 10, // m → inches, 1dp
+      precipChance:     daily.precipitation_probability_max?.[0] || 0,
+      tempF:            Math.round(current.temperature_2m         || 0),
+      apparentTempF:    Math.round(current.apparent_temperature   || 0),
+      humidity:         Math.round(current.relative_humidity_2m   || 0),
+      dewPointF:        Math.round(current.dew_point_2m           || 0),
+      windSpeed:        Math.round(current.wind_speed_10m         || 0),
+      windGusts:        Math.round(current.wind_gusts_10m         || 0),
+      windDirectionDeg: Math.round(current.wind_direction_10m     || 0),
+      visibility:       Math.round((current.visibility            || 0) / 1609.34),
+      cloudCover:       current.cloud_cover          || 0,
+      uvIndex:          current.uv_index             || 0,
+      shortwaveRadiation: current.shortwave_radiation || 0,
+      sunrise:          daily.sunrise?.[0]?.split('T')?.[1]  || '06:00',
+      sunset:           daily.sunset?.[0]?.split('T')?.[1]   || '18:00',
       utcOffsetSeconds,
     };
   } catch (err) {
     console.error('Open-Meteo failed:', err);
     return {
-      weatherCode: 0,
-      precip: 0,
+      weatherCode: 0, isDay: true,
+      precip: 0, rain: 0, snowfall: 0, snowDepthIn: 0,
       precipChance: 0,
-      tempF: 70,
-      windSpeed: 0,
-      visibility: 10,
-      cloudCover: 0,
-      uvIndex: 0,
-      sunrise: '06:00',
-      sunset: '18:00',
-      utcOffsetSeconds: 0,
+      tempF: 70, apparentTempF: 70,
+      humidity: 50, dewPointF: 50,
+      windSpeed: 0, windGusts: 0, windDirectionDeg: 0,
+      visibility: 10, cloudCover: 0, uvIndex: 0, shortwaveRadiation: 0,
+      sunrise: '06:00', sunset: '18:00', utcOffsetSeconds: 0,
     };
   }
+}
+
+export function degreesToCompass(deg: number): string {
+  const dirs = ['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSW','SW','WSW','W','WNW','NW','NNW'];
+  return dirs[Math.round(deg / 22.5) % 16];
+}
+
+export function getLightQuality(wm2: number, isDay: boolean): string {
+  if (!isDay || wm2 < 5)   return 'No direct light';
+  if (wm2 < 50)            return 'Dim ambient light';
+  if (wm2 < 200)           return 'Soft diffuse light';
+  if (wm2 < 400)           return 'Moderate sunlight';
+  if (wm2 < 650)           return 'Bright direct sunlight';
+  return 'Intense direct sunlight';
+}
+
+export function getPrecipitationType(weatherCode: number, rain: number, snowfall: number): string {
+  if ([56, 57, 66, 67].includes(weatherCode))          return 'freezing rain';
+  if (rain > 0 && snowfall > 0)                         return 'wintry mix';
+  if ([51, 53, 55].includes(weatherCode))               return 'drizzle';
+  if ([61, 63, 65, 80, 81, 82].includes(weatherCode))   return 'rain';
+  if ([71, 73, 75, 77, 85, 86].includes(weatherCode))   return 'snow';
+  if ([95, 96, 99].includes(weatherCode))               return 'thunderstorm';
+  return 'none';
 }
 
 /**

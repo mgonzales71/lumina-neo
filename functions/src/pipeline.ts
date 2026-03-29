@@ -1,5 +1,5 @@
 import { Env, ProfileSettings, POIEntry, PromptVariables } from './types';
-import { renderPrompt, reverseGeocode, getWeather, getMoonData, resolveTheme, getWeatherDescriptions } from './utils';
+import { renderPrompt, reverseGeocode, getWeather, getMoonData, resolveTheme, getWeatherDescriptions, degreesToCompass, getLightQuality, getPrecipitationType } from './utils';
 import { PROVIDER_REGISTRY } from './providers';
 
 export interface PipelineParams {
@@ -78,8 +78,17 @@ export async function generateImagePipeline(env: Env, params: PipelineParams): P
     const time_of_day_simple: 'Daytime' | 'Nighttime' =
         (currentTimeMinutes >= sunriseMinutes && currentTimeMinutes < sunsetMinutes) ? 'Daytime' : 'Nighttime';
 
-    const isDay = time_of_day_simple === 'Daytime';
+    // Use API-provided is_day for weather description (more accurate in polar regions / edge of day)
+    const isDay = weather.isDay;
     const weatherDesc = getWeatherDescriptions(weather.weatherCode, isDay);
+
+    // Derived atmospheric conditions
+    const precipitationType = getPrecipitationType(weather.weatherCode, weather.rain, weather.snowfall);
+    const windDirection      = degreesToCompass(weather.windDirectionDeg);
+    const lightQuality       = getLightQuality(weather.shortwaveRadiation, isDay);
+    const frostRisk          = weather.dewPointF <= 36;
+    const rainbowPotential   = isDay && weather.precip > 0 && weather.cloudCover < 80;
+    const heatShimmer        = weather.apparentTempF >= 95 && weather.humidity < 40;
 
     // Granular time-of-day bucket
     let time_of_day_bucket: PromptVariables['time_of_day_bucket'] = 'afternoon';
@@ -139,12 +148,23 @@ export async function generateImagePipeline(env: Env, params: PipelineParams): P
         weather: weatherDesc.short,
         weather_descriptive: weatherDesc.long,
         precipitation_chance: weather.precipChance,
+        precipitation_type: precipitationType,
         temperature_f: weather.tempF,
+        apparent_temperature_f: weather.apparentTempF,
         wind_speed_mph: weather.windSpeed,
+        wind_gusts_mph: weather.windGusts,
+        wind_direction: windDirection,
         visibility_mi: weather.visibility,
         cloud_cover_pct: weather.cloudCover,
         uv_index: weather.uvIndex,
         sun_strength: weather.uvIndex > 6 ? 'high' : (weather.uvIndex > 3 ? 'medium' : 'low'),
+        humidity_pct: weather.humidity,
+        dew_point_f: weather.dewPointF,
+        snow_depth_in: weather.snowDepthIn,
+        light_quality: lightQuality,
+        frost_risk: frostRisk,
+        rainbow_potential: rainbowPotential,
+        heat_shimmer: heatShimmer,
         sunrise: weather.sunrise,
         sunset: weather.sunset,
         moon_phase: moon.moonPhase,

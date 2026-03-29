@@ -5,12 +5,13 @@ import { exportData, importData } from './utils.js';
 let currentEditingPromptId = null;
 
 const PROMPT_VARIABLES = [
-    { group: 'POI',      vars: ['poi_name', 'poi_desc'] },
-    { group: 'Location', vars: ['city', 'state_region', 'country'] },
-    { group: 'Time',     vars: ['time_of_day', 'time_of_day_simple', 'time_of_day_bucket', 'datetime', 'date', 'time'] },
-    { group: 'Weather',  vars: ['weather', 'temperature', 'temperature_f', 'wind_speed_mph', 'cloud_cover_pct', 'visibility_mi', 'uv_index', 'precipitation_chance'] },
-    { group: 'Sun/Moon', vars: ['sunrise', 'sunset', 'moon_phase', 'moon_illumination_pct', 'moonrise', 'moonset'] },
-    { group: 'Style',    vars: ['theme', 'style'] },
+    { group: 'POI',        vars: ['poi_name', 'poi_desc'] },
+    { group: 'Location',   vars: ['city', 'state_region', 'country'] },
+    { group: 'Time',       vars: ['time_of_day', 'time_of_day_simple', 'time_of_day_bucket', 'datetime', 'date', 'time', 'day_of_week'] },
+    { group: 'Weather',    vars: ['weather', 'weather_descriptive', 'temperature', 'temperature_f', 'apparent_temperature_f', 'precipitation_chance', 'precipitation_type', 'wind_speed_mph', 'wind_gusts_mph', 'wind_direction', 'cloud_cover_pct', 'visibility_mi', 'uv_index', 'sun_strength', 'humidity_pct', 'dew_point_f', 'snow_depth_in', 'light_quality'] },
+    { group: 'Conditions', vars: ['frost_risk', 'rainbow_potential', 'heat_shimmer'] },
+    { group: 'Sun/Moon',   vars: ['sunrise', 'sunset', 'moon_phase', 'moon_illumination_pct', 'moonrise', 'moonset'] },
+    { group: 'Style',      vars: ['theme', 'style'] },
 ];
 
 function buildVariableChips() {
