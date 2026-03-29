@@ -1,5 +1,5 @@
 import { Env, ProfileSettings, POIEntry, PromptVariables } from './types';
-import { renderPrompt, reverseGeocode, getWeather, getMoonData, resolveTheme } from './utils';
+import { renderPrompt, reverseGeocode, getWeather, getMoonData, resolveTheme, getWeatherDescriptions } from './utils';
 import { PROVIDER_REGISTRY } from './providers';
 
 export interface PipelineParams {
@@ -78,6 +78,9 @@ export async function generateImagePipeline(env: Env, params: PipelineParams): P
     const time_of_day_simple: 'Daytime' | 'Nighttime' =
         (currentTimeMinutes >= sunriseMinutes && currentTimeMinutes < sunsetMinutes) ? 'Daytime' : 'Nighttime';
 
+    const isDay = time_of_day_simple === 'Daytime';
+    const weatherDesc = getWeatherDescriptions(weather.weatherCode, isDay);
+
     // Granular time-of-day bucket
     let time_of_day_bucket: PromptVariables['time_of_day_bucket'] = 'afternoon';
 
@@ -133,7 +136,8 @@ export async function generateImagePipeline(env: Env, params: PipelineParams): P
         is_weekend: [0, 6].includes(localDayNum),
         time_of_day_simple,
         time_of_day_bucket,
-        weather: weather.description,
+        weather: weatherDesc.short,
+        weather_descriptive: weatherDesc.long,
         precipitation_chance: weather.precipChance,
         temperature_f: weather.tempF,
         wind_speed_mph: weather.windSpeed,
@@ -246,7 +250,7 @@ export async function generateImagePipeline(env: Env, params: PipelineParams): P
             state: geo.state,
             country: geo.country,
             theme,
-            weather: weather.description,
+            weather: weatherDesc.short,
             temp: weather.tempF
         }
     };

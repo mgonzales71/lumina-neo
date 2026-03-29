@@ -42,7 +42,8 @@ export interface PromptVariables {
     | "noon" | "afternoon" | "sunset" | "late_night";
 
   // Weather
-  weather: string;           // "Clear", "Overcast", "Light rain", etc.
+  weather: string;               // Short: "Light rain", "Overcast", etc.
+  weather_descriptive: string;   // Long: "Light rain with gentle steady rainfall and glistening wet surfaces"
   precipitation_chance: number;
   temperature_f: number;
   wind_speed_mph: number;

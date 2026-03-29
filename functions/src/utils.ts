@@ -51,7 +51,7 @@ export async function getWeather(lat: number, lon: number) {
     const utcOffsetSeconds: number = data.utc_offset_seconds || 0;
 
     return {
-      description: getWeatherDescription(current.weather_code),
+      weatherCode: current.weather_code as number,
       precip: current.precipitation || 0,
       precipChance: daily.precipitation_probability_max?.[0] || 0,
       tempF: Math.round(current.temperature_2m || 0),
@@ -66,7 +66,7 @@ export async function getWeather(lat: number, lon: number) {
   } catch (err) {
     console.error('Open-Meteo failed:', err);
     return {
-      description: 'Clear',
+      weatherCode: 0,
       precip: 0,
       precipChance: 0,
       tempF: 70,
@@ -118,17 +118,97 @@ export async function getMoonData(lat: number, lon: number, dateStr?: string) {
     }
 }
 
-function getWeatherDescription(code: number): string {
-    const codes: Record<number, string> = {
-        0: 'Clear sky',
-        1: 'Mainly clear', 2: 'Partly cloudy', 3: 'Overcast',
-        45: 'Fog', 48: 'Depositing rime fog',
-        51: 'Light drizzle', 53: 'Moderate drizzle', 55: 'Dense drizzle',
-        61: 'Slight rain', 63: 'Moderate rain', 65: 'Heavy rain',
-        71: 'Slight snow fall', 73: 'Moderate snow fall', 75: 'Heavy snow fall',
-        95: 'Thunderstorm',
+interface WeatherEntry {
+    short: string;
+    long: string;
+    shortNight?: string;
+    longNight?: string;
+}
+
+const WMO_CODES: Record<number, WeatherEntry> = {
+    0:  { short: 'Clear sky',
+          long:  'Clear sky with full sunshine and excellent visibility',
+          shortNight: 'Clear sky',
+          longNight:  'Clear night sky with stars fully visible' },
+    1:  { short: 'Mainly clear',
+          long:  'Mainly clear with a few high clouds and good visibility',
+          shortNight: 'Mainly clear',
+          longNight:  'Mainly clear night with occasional thin clouds' },
+    2:  { short: 'Partly cloudy',
+          long:  'Partly cloudy with a mix of sunshine and clouds',
+          shortNight: 'Partly cloudy',
+          longNight:  'Partly cloudy night with the moon occasionally obscured' },
+    3:  { short: 'Overcast',
+          long:  'Completely overcast with dense cloud cover blocking all sunlight',
+          shortNight: 'Overcast',
+          longNight:  'Fully overcast night with no visible stars or moon' },
+    45: { short: 'Fog',
+          long:  'Fog with visibility significantly reduced to a few hundred meters' },
+    48: { short: 'Freezing fog',
+          long:  'Freezing fog depositing rime ice on surfaces with near-zero visibility' },
+    51: { short: 'Light drizzle',
+          long:  'Light drizzle with fine misty droplets dampening surfaces' },
+    53: { short: 'Moderate drizzle',
+          long:  'Moderate drizzle with steady fine rain and visibly wet surfaces' },
+    55: { short: 'Dense drizzle',
+          long:  'Dense drizzle with heavy mist and significantly reduced visibility' },
+    56: { short: 'Light freezing drizzle',
+          long:  'Light freezing drizzle forming a thin glaze of ice on surfaces' },
+    57: { short: 'Heavy freezing drizzle',
+          long:  'Heavy freezing drizzle rapidly coating all surfaces in dangerous ice' },
+    61: { short: 'Light rain',
+          long:  'Light rain with gentle steady rainfall and glistening wet surfaces' },
+    63: { short: 'Moderate rain',
+          long:  'Moderate rain with continuous steady rainfall and flowing gutters' },
+    65: { short: 'Heavy rain',
+          long:  'Heavy rain with intense downpour and possible standing water' },
+    66: { short: 'Freezing rain',
+          long:  'Freezing rain forming a dangerous clear ice glaze on all surfaces' },
+    67: { short: 'Heavy freezing rain',
+          long:  'Heavy freezing rain causing severe ice accumulation on roads and structures' },
+    71: { short: 'Light snow',
+          long:  'Light snowfall with gentle flakes leaving a thin white dusting' },
+    73: { short: 'Moderate snow',
+          long:  'Moderate snowfall with steady accumulation and reduced visibility' },
+    75: { short: 'Heavy snow',
+          long:  'Heavy snowfall with significant accumulation and very low visibility' },
+    77: { short: 'Snow grains',
+          long:  'Snow grains falling as tiny opaque white ice pellets' },
+    80: { short: 'Light rain showers',
+          long:  'Light rain showers with brief bursts of rain and bright intervals between',
+          shortNight: 'Light rain showers',
+          longNight:  'Light rain showers passing through with clearing breaks overnight' },
+    81: { short: 'Moderate rain showers',
+          long:  'Moderate rain showers with heavy bursts and distinct clearings between',
+          shortNight: 'Moderate rain showers',
+          longNight:  'Moderate rain showers moving through with breaks of dry air overnight' },
+    82: { short: 'Violent rain showers',
+          long:  'Violent rain showers with torrential downpours and rapidly changing conditions',
+          shortNight: 'Violent rain showers',
+          longNight:  'Violent rain showers overnight with intense bursts and brief lulls' },
+    85: { short: 'Light snow showers',
+          long:  'Light snow showers with brief flurries and clearing intervals',
+          shortNight: 'Light snow showers',
+          longNight:  'Light overnight snow showers with brief flurries and clearing skies between' },
+    86: { short: 'Heavy snow showers',
+          long:  'Heavy snow showers with intense blizzard-like bursts and accumulating snow',
+          shortNight: 'Heavy snow showers',
+          longNight:  'Heavy overnight snow showers with intense blizzard-like bursts' },
+    95: { short: 'Thunderstorm',
+          long:  'Thunderstorm with frequent lightning, rolling thunder, and heavy rain' },
+    96: { short: 'Thunderstorm with hail',
+          long:  'Thunderstorm with lightning, heavy rain, and small hail stones' },
+    99: { short: 'Thunderstorm with heavy hail',
+          long:  'Severe thunderstorm with frequent lightning, heavy rain, and large damaging hail' },
+};
+
+export function getWeatherDescriptions(code: number, isDay: boolean): { short: string; long: string } {
+    const entry = WMO_CODES[code];
+    if (!entry) return { short: 'Unknown', long: 'Unknown weather conditions' };
+    return {
+        short: (!isDay && entry.shortNight) ? entry.shortNight : entry.short,
+        long:  (!isDay && entry.longNight)  ? entry.longNight  : entry.long,
     };
-    return codes[code] || 'Clear';
 }
 
 export function resolveTheme(themes: ThemeEntry[]): string {
