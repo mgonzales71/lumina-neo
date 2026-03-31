@@ -53,6 +53,14 @@ export async function generateImagePipeline(env: Env, params: PipelineParams): P
     crypto.getRandomValues(rndPOI);
     const selectedPOI = pois[rndPOI[0] % pois.length];
 
+    // Auto-register new locations to the profile so the web app sees them
+    if (!profile.locations) profile.locations = [];
+    const locationKnown = profile.locations.some(l => l.id === locationId);
+    if (!locationKnown) {
+        profile.locations.push({ id: locationId, lat, lon, city: geo.city, state: geo.state, country: geo.country });
+        await env.KV_PROFILES.put(profileKey, JSON.stringify(profile));
+    }
+
     // 4. Weather & Moon
     const [weather, moon] = await Promise.all([
         getWeather(lat, lon),
