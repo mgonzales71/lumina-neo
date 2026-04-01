@@ -867,19 +867,23 @@ async function handleGetProviderModels(request: Request, env: Env): Promise<Resp
             const BUDGET_MAX_IMG = 0.01;  // < $0.01/img → budget tier
             const BUDGET_MAX_TOK = 1.0;   // < $1/M tokens → budget tier
 
-            const fmtN = (n: number) => n >= 1 ? `$${+n.toPrecision(3)}` : `$${+n.toPrecision(2)}`;
+            // Format a dollar amount without scientific notation
+            const fmtN = (n: number): string => {
+                if (n === 0) return '$0';
+                if (n >= 10)   return `$${n.toFixed(2)}`;
+                if (n >= 1)    return `$${n.toFixed(3)}`;
+                if (n >= 0.01) return `$${n.toFixed(4)}`;
+                return `$${n.toFixed(6)}`;
+            };
 
             const models = raw
                 .filter((m: any) => {
+                    // Only match models whose OUTPUT is an image — do not use pricing.image as
+                    // a signal because vision/multimodal models charge per image INPUT token too.
                     const modality: string = m.architecture?.modality || '';
-                    if (category === 'image') {
-                        // Match modality string OR presence of image pricing (OR's model catalog uses both conventions)
-                        const hasImageModality = modality.includes('->image') || modality === 'image';
-                        const hasImagePricing  = m.pricing?.image !== undefined && m.pricing.image !== null && m.pricing.image !== '';
-                        return hasImageModality || hasImagePricing;
-                    } else {
-                        return modality.includes('->text') || modality === 'text';
-                    }
+                    return category === 'image'
+                        ? modality.includes('->image') || modality === 'image'
+                        : modality.includes('->text')  || modality === 'text';
                 })
                 .map((m: any) => {
                     const isFreeId = m.id?.endsWith(':free');
