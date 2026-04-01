@@ -916,8 +916,8 @@ code, .code-snippet {
     100% { background-position: -100% center; }
 }
 
-.image-actions      { display:flex; gap:8px; margin-top:10px; }
-.image-actions .btn { flex:1; font-size:0.8rem; padding:9px 6px; }
+.image-actions      { display:flex; gap:8px; margin-top:10px; justify-content:center; }
+.image-actions .btn { flex:0 1 auto; font-size:0.8rem; padding:9px 18px; }
 .debug-toggle-row   { margin-top:10px; display:flex; justify-content:center; }
 
 /* ── Spinner ──────────────────────────────────────────────── */
@@ -967,5 +967,5 @@ code, .code-snippet {
     .nav-btn      { min-width: 78px; }
     .logo         { font-size: 1.65rem; }
     .card         { padding: var(--s-3); }
-    .image-actions .btn { flex: 0 1 auto; padding: 9px 16px; font-size: 0.85rem; }
+    .image-actions .btn { padding: 9px 20px; font-size: 0.85rem; }
 }
