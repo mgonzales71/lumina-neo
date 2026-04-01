@@ -20,8 +20,12 @@ export async function renderHome() {
         aspectRatio = `${w} / ${h}`;
     }
 
-    const lastImg   = AppState.lastGenerated?.imageUrl;
-    const lastDebug = AppState.lastGenerated?.debug;
+    const lastGen   = AppState.lastGenerated;
+    const ONE_HOUR  = 60 * 60 * 1000;
+    const isStale   = lastGen?.debug?.provider === 'openrouter'
+                      && (Date.now() - (lastGen.generatedAt || 0)) > ONE_HOUR;
+    const lastImg   = isStale ? null : lastGen?.imageUrl;
+    const lastDebug = lastGen?.debug;
 
     container.innerHTML = `
         <div class="card" style="text-align:center;">
@@ -29,7 +33,7 @@ export async function renderHome() {
             <!-- Image Frame -->
             <div id="image-container" class="image-frame" style="aspect-ratio: ${aspectRatio};">
                 ${lastImg
-                    ? `<img src="${lastImg}" alt="Generated image">`
+                    ? `<img src="${lastImg}" alt="Generated image" onerror="this.remove();">`
                     : `<div class="image-frame-placeholder">
                            <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round">
                                <rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.5"/>
@@ -216,7 +220,7 @@ async function doGenerate(lat, lon, btn, btnLabel, overlay, imgContainer, debugC
         toggleDebugBtn.textContent = 'Show Details';
         toggleDebugBtn.disabled    = false;
 
-        AppState.lastGenerated = response;
+        AppState.lastGenerated = { ...response, generatedAt: Date.now() };
         AppState.save();
 
         // Wait for the image bytes to arrive before dismissing the overlay
