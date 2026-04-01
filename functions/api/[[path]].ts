@@ -839,7 +839,8 @@ async function handleGetProviderModels(request: Request, env: Env): Promise<Resp
                 .map((m: any) => {
                     const id = m.name || m.id;
                     const isPaid = m.paid_only || false;
-                    return { id, label: id, paid: isPaid, price: isPaid ? 'paid' : 'FREE' };
+                    // Pollinations uses Pollen credits, not USD per-image — can't show imgs/$1
+                    return { id, label: id, paid: isPaid, tier: isPaid ? 'paid' : 'free', price: isPaid ? 'Pollen' : 'FREE' };
                 });
 
             return jsonResponse({ ok: true, data: models });
@@ -868,10 +869,19 @@ async function handleGetProviderModels(request: Request, env: Env): Promise<Resp
             const data = await res.json() as any;
             const raw: any[] = Array.isArray(data.data) ? data.data : [];
 
-            const BUDGET_MAX_IMG = 0.01; // < $0.01/img → budget tier
+            const BUDGET_MAX_IMG = 0.01; // < $0.01/img → budget tier (> 100 imgs/$1)
             const BUDGET_MAX_TOK = 1.0;  // < $1/M tokens → budget tier
 
-            const fmtN = (n: number): string => {
+            // Format images-per-dollar as a compact count: 25, 500, 10K, 1M
+            const fmtImgPerDollar = (costPerImg: number): string => {
+                const n = Math.floor(1 / costPerImg);
+                if (n >= 1_000_000) return `${+(n / 1_000_000).toPrecision(2)}M imgs/$1`;
+                if (n >= 1_000)     return `${Math.round(n / 1000)}K imgs/$1`;
+                return `${n} imgs/$1`;
+            };
+
+            // Format per-million-token cost without scientific notation
+            const fmtTok = (n: number): string => {
                 if (n === 0)   return '$0';
                 if (n >= 10)   return `$${n.toFixed(2)}`;
                 if (n >= 1)    return `$${n.toFixed(3)}`;
@@ -891,21 +901,21 @@ async function handleGetProviderModels(request: Request, env: Env): Promise<Resp
                         const imgCost = parseFloat(m.pricing?.image   || '0')
                                       + parseFloat(m.pricing?.request || '0');
                         if (isFreeId || imgCost === 0) {
-                            tier = 'free';   price = 'FREE';                   sortPrice = 0;
+                            tier = 'free';   price = 'FREE';                          sortPrice = 0;
                         } else if (imgCost < BUDGET_MAX_IMG) {
-                            tier = 'budget'; price = `${fmtN(imgCost)}/img`;   sortPrice = imgCost;
+                            tier = 'budget'; price = fmtImgPerDollar(imgCost);        sortPrice = imgCost;
                         } else {
-                            tier = 'paid';   price = `${fmtN(imgCost)}/img`;   sortPrice = imgCost;
+                            tier = 'paid';   price = fmtImgPerDollar(imgCost);        sortPrice = imgCost;
                         }
                     } else {
                         const inCost  = parseFloat(m.pricing?.prompt     || '0') * 1_000_000;
                         const outCost = parseFloat(m.pricing?.completion || '0') * 1_000_000;
                         if (isFreeId || (inCost === 0 && outCost === 0)) {
-                            tier = 'free';   price = 'FREE';                                    sortPrice = 0;
+                            tier = 'free';   price = 'FREE';                                        sortPrice = 0;
                         } else if (inCost < BUDGET_MAX_TOK && outCost < BUDGET_MAX_TOK) {
-                            tier = 'budget'; price = `${fmtN(inCost)}/${fmtN(outCost)} /M`;    sortPrice = inCost;
+                            tier = 'budget'; price = `${fmtTok(inCost)}/${fmtTok(outCost)} /M`;    sortPrice = inCost;
                         } else {
-                            tier = 'paid';   price = `${fmtN(inCost)}/${fmtN(outCost)} /M`;    sortPrice = inCost;
+                            tier = 'paid';   price = `${fmtTok(inCost)}/${fmtTok(outCost)} /M`;    sortPrice = inCost;
                         }
                     }
 
