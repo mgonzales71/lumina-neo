@@ -148,8 +148,12 @@ function renderCategoryConfig(providerId, categoryName, def, userConf, dynamicMo
     // Model Select
     const modelField = def.fields.find(f => f.key === 'model');
     if (modelField) {
-        html += `<div class="form-group"><label>Model</label>`;
-        
+        html += `<div class="form-group">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                <label style="margin:0;">Model</label>
+                <button class="refresh-models-btn btn btn-secondary btn-sm" data-provider="${providerId}" data-category="${categoryName}" style="padding:3px 10px; font-size:0.75rem;">↻ Refresh</button>
+            </div>`;
+
         // Fall back to static options if dynamic fetch returned nothing (empty array is truthy so check length)
         const modelsToRender = (dynamicModels && dynamicModels.length > 0)
             ? dynamicModels
@@ -214,6 +218,30 @@ function renderCategoryConfig(providerId, categoryName, def, userConf, dynamicMo
 }
 
 function bindDynamicListeners(settings) {
+    const profile = AppState.currentProfile;
+
+    document.querySelectorAll('.refresh-models-btn').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+            const { provider, category } = e.target.dataset;
+            const originalText = e.target.textContent;
+            e.target.textContent = '…';
+            e.target.disabled = true;
+
+            try {
+                delete providerData[provider]; // Clear cached models for this provider
+                const uidParam = `&userId=${encodeURIComponent(AppState.userId)}&profileId=${encodeURIComponent(profile.id)}`;
+                const fresh = await fetchApi(`/providers/models?providerId=${provider}&category=${category}${uidParam}`);
+                if (!providerData[provider]) providerData[provider] = {};
+                providerData[provider][`${category}Models`] = fresh;
+                renderProviders();
+            } catch (err) {
+                alert('Failed to refresh models: ' + err.message);
+                e.target.textContent = originalText;
+                e.target.disabled = false;
+            }
+        });
+    });
+
     document.querySelectorAll('.toggle-btn').forEach(btn => {
         btn.addEventListener('click', (e) => {
             const { provider, category, key } = e.target.dataset;
