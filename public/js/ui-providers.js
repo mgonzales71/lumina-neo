@@ -150,7 +150,10 @@ function renderCategoryConfig(providerId, categoryName, def, userConf, dynamicMo
     if (modelField) {
         html += `<div class="form-group"><label>Model</label>`;
         
-        const modelsToRender = dynamicModels || (modelField.options ? modelField.options.map(o => ({ id: o, label: o })) : []);
+        // Fall back to static options if dynamic fetch returned nothing (empty array is truthy so check length)
+        const modelsToRender = (dynamicModels && dynamicModels.length > 0)
+            ? dynamicModels
+            : (modelField.options ? modelField.options.map(o => ({ id: o, label: o })) : []);
 
         if (modelsToRender.length > 0) {
             html += `<select class="config-field" data-provider="${providerId}" data-category="${categoryName}" data-key="selectedModel">`;

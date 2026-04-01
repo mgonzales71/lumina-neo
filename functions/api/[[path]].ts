@@ -872,9 +872,14 @@ async function handleGetProviderModels(request: Request, env: Env): Promise<Resp
             const models = raw
                 .filter((m: any) => {
                     const modality: string = m.architecture?.modality || '';
-                    return category === 'image'
-                        ? modality.includes('->image')
-                        : modality.includes('->text');
+                    if (category === 'image') {
+                        // Match modality string OR presence of image pricing (OR's model catalog uses both conventions)
+                        const hasImageModality = modality.includes('->image') || modality === 'image';
+                        const hasImagePricing  = m.pricing?.image !== undefined && m.pricing.image !== null && m.pricing.image !== '';
+                        return hasImageModality || hasImagePricing;
+                    } else {
+                        return modality.includes('->text') || modality === 'text';
+                    }
                 })
                 .map((m: any) => {
                     const isFreeId = m.id?.endsWith(':free');
