@@ -1,6 +1,6 @@
 /**
  * Lumina Neo Pages Functions API Entry Point
- * Version: v1.5.2
+ * Version: v1.5.3
  */
 import { Env, ApiResponse, UserRecord, ProfileSettings, LocationEntry, POIEntry, PromptVariables } from '../src/types';
 import { PROVIDER_REGISTRY } from '../src/providers';
@@ -774,6 +774,40 @@ async function handleGetProviderAccount(request: Request, env: Env): Promise<Res
         }
     }
 
+    if (providerId === 'openrouter') {
+        try {
+            const [keyRes, creditsRes] = await Promise.all([
+                fetch('https://openrouter.ai/api/v1/auth/key', {
+                    headers: { 'Authorization': `Bearer ${providerCfg.apiKey}` }
+                }),
+                fetch('https://openrouter.ai/api/v1/credits', {
+                    headers: { 'Authorization': `Bearer ${providerCfg.apiKey}` }
+                })
+            ]);
+
+            const keyData   = await keyRes.json()   as any;
+            const creditData = await creditsRes.json() as any;
+
+            const keyInfo   = keyData.data   || {};
+            const credits   = creditData.data || {};
+            const balance   = Math.round(((credits.total_credits || 0) - (credits.total_usage || 0)) * 10000) / 10000;
+            const isFree    = keyInfo.is_free_tier === true;
+
+            return jsonResponse({
+                ok: true,
+                data: {
+                    balance,
+                    username: keyInfo.label || 'OpenRouter',
+                    tier: isFree ? 'Free tier' : 'Paid',
+                    email: '',
+                    nextResetAt: ''
+                }
+            });
+        } catch (err: any) {
+            return errorResponse('PROVIDER_ERROR', err.message);
+        }
+    }
+
     return errorResponse('NOT_SUPPORTED', 'Account info not supported for this provider');
 }
 
@@ -804,6 +838,35 @@ async function handleGetProviderModels(request: Request, env: Env): Promise<Resp
                     const id = m.name || m.id;
                     return { id, label: id, paid: m.paid_only || false };
                 });
+
+            return jsonResponse({ ok: true, data: models });
+        } catch (err: any) {
+            return errorResponse('PROVIDER_ERROR', err.message);
+        }
+    }
+
+    if (providerId === 'openrouter') {
+        try {
+            // Public endpoint — no auth needed to list models
+            const res = await fetch('https://openrouter.ai/api/v1/models');
+            const data = await res.json() as any;
+            const raw: any[] = Array.isArray(data.data) ? data.data : [];
+
+            const models = raw
+                .filter((m: any) => {
+                    const modality: string = m.architecture?.modality || '';
+                    if (category === 'image') {
+                        // text->image or text+image->image
+                        return modality.endsWith('->image') || modality.includes('->image');
+                    } else {
+                        return modality.endsWith('->text') || modality.includes('->text');
+                    }
+                })
+                .map((m: any) => {
+                    const isFree = m.id?.endsWith(':free') || m.pricing?.image === '0' || m.pricing?.completion === '0';
+                    return { id: m.id, label: m.name || m.id, paid: !isFree };
+                })
+                .sort((a: any, b: any) => a.label.localeCompare(b.label));
 
             return jsonResponse({ ok: true, data: models });
         } catch (err: any) {

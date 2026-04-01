@@ -265,6 +265,42 @@ export async function generateImagePipeline(env: Env, params: PipelineParams): P
         }
 
         imageUrl = `https://gen.pollinations.ai/image/${encodedPrompt}?width=${width}&height=${height}&model=${model}&seed=${seed}${extraParams}${keyParam}`;
+    } else if (providerId === 'openrouter') {
+        const apiKey = providerSettings.apiKey;
+        if (!apiKey) throw new Error('OpenRouter API key is required. Add it in the Providers tab.');
+
+        const orModel = model || 'black-forest-labs/flux-schnell';
+        const defaults = providerSettings.image?.defaults || {};
+
+        const orBody: Record<string, any> = {
+            model: orModel,
+            prompt: finalPrompt,
+            n: 1,
+            size: `${width}x${height}`
+        };
+        if (defaults.negative_prompt && String(defaults.negative_prompt).trim()) {
+            orBody.negative_prompt = String(defaults.negative_prompt).trim();
+        }
+
+        const orResponse = await fetch('https://openrouter.ai/api/v1/images/generations', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${apiKey}`,
+                'HTTP-Referer': 'https://lumina-neo.pages.dev',
+                'X-Title': 'Lumina Neo'
+            },
+            body: JSON.stringify(orBody)
+        });
+
+        if (!orResponse.ok) {
+            const errText = await orResponse.text();
+            throw new Error(`OpenRouter image generation failed (${orResponse.status}): ${errText}`);
+        }
+
+        const orResult = await orResponse.json() as any;
+        imageUrl = orResult.data?.[0]?.url || '';
+        if (!imageUrl) throw new Error('OpenRouter returned no image URL in response');
     } else {
         imageUrl = 'https://via.placeholder.com/1024x1024?text=Other+Provider';
     }

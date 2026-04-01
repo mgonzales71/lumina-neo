@@ -2,7 +2,7 @@ import { ProviderRegistry } from './types';
 
 /**
  * Provider Registry
- * Version: v1.2.0
+ * Version: v1.3.0
  */
 export const PROVIDER_REGISTRY: ProviderRegistry = {
   pollinations: {
@@ -50,7 +50,7 @@ export const PROVIDER_REGISTRY: ProviderRegistry = {
   openrouter: {
     id: 'openrouter',
     label: 'OpenRouter',
-    docsUrl: 'https://openrouter.ai/docs',
+    docsUrl: 'https://openrouter.ai/docs#images',
     apiKeyUrl: 'https://openrouter.ai/keys',
     auth: {
       type: 'bearer',
@@ -59,15 +59,24 @@ export const PROVIDER_REGISTRY: ProviderRegistry = {
     },
     categories: {
       image: {
-        enabled: false,
+        enabled: true,
+        modelsUrl: 'https://openrouter.ai/api/v1/models',
         generate: {
           method: 'POST',
-          url: 'https://openrouter.ai/api/v1/chat/completions',
+          url: 'https://openrouter.ai/api/v1/images/generations',
           contentType: 'application/json',
           promptLocation: 'body'
         },
         fields: [
-          { key: 'model', type: 'text', optional: false }
+          { key: 'model', type: 'select', source: 'models', options: [
+            'black-forest-labs/flux-schnell',
+            'black-forest-labs/flux-1.1-pro',
+            'black-forest-labs/flux-1.1-pro-ultra',
+            'openai/dall-e-3',
+            'openai/dall-e-2',
+            'stability-ai/stable-diffusion-xl-base-1.0'
+          ], optional: false },
+          { key: 'negative_prompt', type: 'text', optional: true }
         ]
       },
       text: {

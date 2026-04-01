@@ -45,8 +45,9 @@ export async function renderProviders() {
         }
         const userConf = settings.providers[def.id];
 
-        // Fetch dynamic data if enabled and key exists
-        if (userConf.enabled && userConf.apiKey && def.id === 'pollinations' && !providerData[def.id]) {
+        // Fetch dynamic data if enabled and key exists (Pollinations + OpenRouter)
+        const supportsDynamic = ['pollinations', 'openrouter'].includes(def.id);
+        if (userConf.enabled && userConf.apiKey && supportsDynamic && !providerData[def.id]) {
             try {
                 const [account, imageModels, textModels] = await Promise.all([
                     fetchApi(`/providers/account?userId=${AppState.userId}&profileId=${profile.id}&providerId=${def.id}`),
@@ -85,7 +86,7 @@ export async function renderProviders() {
                         <div class="provider-info" style="background: rgba(0,0,0,0.2); padding: 12px; border-radius: 8px; margin-bottom: 15px; font-size: 0.9rem; line-height: 1.7;">
                             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
                                 <span><strong>${account.username}</strong> &nbsp;<span style="opacity:0.7; font-size:0.85em;">${account.tier}</span></span>
-                                <span style="font-weight:600; color:var(--primary);">${account.balance} Pollen</span>
+                                <span style="font-weight:600; color:var(--primary);">${def.id === 'openrouter' ? '$' + account.balance + ' Credits' : account.balance + ' Pollen'}</span>
                             </div>
                             ${account.email ? `<div style="opacity:0.7; font-size:0.85em;">${account.email}</div>` : ''}
                             ${account.nextResetAt ? `<div style="opacity:0.6; font-size:0.8em;">Resets ${new Date(account.nextResetAt).toLocaleDateString(undefined, {month:'short', day:'numeric', year:'numeric'})}</div>` : ''}
