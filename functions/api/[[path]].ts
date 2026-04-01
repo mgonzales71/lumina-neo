@@ -887,7 +887,9 @@ async function handleGetProviderModels(request: Request, env: Env): Promise<Resp
                     let sortPrice = 0;
 
                     if (category === 'image') {
-                        const imgCost = parseFloat(m.pricing?.image || '0');
+                        // Some models put per-image cost in pricing.request instead of pricing.image
+                        const imgCost = parseFloat(m.pricing?.image   || '0')
+                                      + parseFloat(m.pricing?.request || '0');
                         if (isFreeId || imgCost === 0) {
                             tier = 'free';   price = 'FREE';                   sortPrice = 0;
                         } else if (imgCost < BUDGET_MAX_IMG) {
