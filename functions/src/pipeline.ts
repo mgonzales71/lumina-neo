@@ -26,6 +26,7 @@ export interface PipelineResult {
         theme: string;
         weather: string;
         temp: number;
+        weatherFallback: boolean;
     }
 }
 
@@ -283,7 +284,8 @@ export async function generateImagePipeline(env: Env, params: PipelineParams): P
             country: geo.country,
             theme,
             weather: weatherDesc.short,
-            temp: weather.tempF
+            temp: weather.tempF,
+            weatherFallback: weather.weatherFallback
         }
     };
 }

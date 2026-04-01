@@ -1,6 +1,6 @@
 /**
  * Lumina Neo Pages Functions API Entry Point
- * Version: v1.5.1
+ * Version: v1.5.2
  */
 import { Env, ApiResponse, UserRecord, ProfileSettings, LocationEntry, POIEntry, PromptVariables } from '../src/types';
 import { PROVIDER_REGISTRY } from '../src/providers';
@@ -667,6 +667,7 @@ async function handleGenerateImage(request: Request, env: Env): Promise<Response
             ok: true,
             data: {
                 imageUrl: result.imageUrl,
+                weatherFallback: result.meta.weatherFallback,
                 debug: {
                     prompt: result.prompt,
                     promptVariables: result.promptVars,
@@ -709,6 +710,7 @@ async function handleShortcutsGenerate(request: Request, env: Env): Promise<Resp
             ok: true,
             data: {
                 imageUrl: result.imageUrl,
+                weatherFallback: result.meta.weatherFallback,
                 poi: {
                     name: result.poi.name,
                     description: result.poi.description
