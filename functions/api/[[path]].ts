@@ -836,7 +836,8 @@ async function handleGetProviderModels(request: Request, env: Env): Promise<Resp
                 })
                 .map((m: any) => {
                     const id = m.name || m.id;
-                    return { id, label: id, paid: m.paid_only || false };
+                    const isPaid = m.paid_only || false;
+                    return { id, label: id, paid: isPaid, price: isPaid ? 'paid' : 'FREE' };
                 });
 
             return jsonResponse({ ok: true, data: models });
@@ -864,9 +865,28 @@ async function handleGetProviderModels(request: Request, env: Env): Promise<Resp
                 })
                 .map((m: any) => {
                     const isFree = m.id?.endsWith(':free') || m.pricing?.image === '0' || m.pricing?.completion === '0';
-                    return { id: m.id, label: m.name || m.id, paid: !isFree };
+
+                    let price = 'FREE';
+                    if (!isFree) {
+                        if (category === 'image') {
+                            const imgCost = parseFloat(m.pricing?.image || '0');
+                            price = imgCost > 0 ? `$${+imgCost.toPrecision(3)}/img` : 'FREE';
+                        } else {
+                            const inCost  = parseFloat(m.pricing?.prompt     || '0') * 1_000_000;
+                            const outCost = parseFloat(m.pricing?.completion || '0') * 1_000_000;
+                            const fmtN = (n: number) => n >= 1 ? `$${+n.toPrecision(3)}` : `$${+n.toPrecision(2)}`;
+                            price = `${fmtN(inCost)}/${fmtN(outCost)} /M`;
+                        }
+                    }
+
+                    return { id: m.id, label: m.name || m.id, paid: !isFree, price };
                 })
-                .sort((a: any, b: any) => a.label.localeCompare(b.label));
+                .sort((a: any, b: any) => {
+                    // FREE models first, then cheapest paid first
+                    if (!a.paid && b.paid) return -1;
+                    if (a.paid && !b.paid) return 1;
+                    return a.label.localeCompare(b.label);
+                });
 
             return jsonResponse({ ok: true, data: models });
         } catch (err: any) {
