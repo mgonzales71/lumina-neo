@@ -253,6 +253,7 @@ async function saveProfile(profile) {
     try {
         await fetchApi('/profile', 'PUT', { userId: AppState.userId, profile });
         AppState.setProfile(profile);
+        providerData = {}; // Clear cache so model lists re-fetch with latest key/settings
         alert('Provider settings saved!');
         renderProviders(); // Re-render to fetch new data
     } catch (err) {
