@@ -731,6 +731,7 @@ code, .code-snippet {
     justify-content: center;
     margin-bottom: var(--s-2);
     min-height: 160px;
+    max-height: 60vh;
 }
 .image-frame img {
     width: 100%; height: 100%;
