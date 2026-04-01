@@ -2,7 +2,7 @@ import { ProviderRegistry } from './types';
 
 /**
  * Provider Registry
- * Version: v1.3.0
+ * Version: v1.3.1
  */
 export const PROVIDER_REGISTRY: ProviderRegistry = {
   pollinations: {
@@ -76,7 +76,11 @@ export const PROVIDER_REGISTRY: ProviderRegistry = {
             'openai/dall-e-2',
             'stability-ai/stable-diffusion-xl-base-1.0'
           ], optional: false },
-          { key: 'negative_prompt', type: 'text', optional: true }
+          { key: 'prompt_upsampling', type: 'boolean',  optional: true },
+          { key: 'seed',             type: 'number',   optional: true },
+          { key: 'steps',            type: 'number',   optional: true },
+          { key: 'guidance_scale',   type: 'number',   optional: true },
+          { key: 'negative_prompt',  type: 'text',     optional: true }
         ]
       },
       text: {
