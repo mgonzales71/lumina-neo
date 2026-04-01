@@ -872,11 +872,13 @@ async function handleGetProviderModels(request: Request, env: Env): Promise<Resp
             const BUDGET_MAX_IMG = 0.01; // < $0.01/img → budget tier (> 100 imgs/$1)
             const BUDGET_MAX_TOK = 1.0;  // < $1/M tokens → budget tier
 
-            // Format images-per-dollar as a compact count: 25, 500, 10K, 1M
+            // Format images-per-dollar as a compact count: 25, 500, 10K, 1.5M
+            // Uses toFixed to avoid toPrecision producing scientific notation for large values
             const fmtImgPerDollar = (costPerImg: number): string => {
                 const n = Math.floor(1 / costPerImg);
-                if (n >= 1_000_000) return `${+(n / 1_000_000).toPrecision(2)}M imgs/$1`;
-                if (n >= 1_000)     return `${Math.round(n / 1000)}K imgs/$1`;
+                if (n >= 1_000_000_000) return `${+(n / 1_000_000_000).toFixed(1).replace(/\.0$/, '')}B imgs/$1`;
+                if (n >= 1_000_000)     return `${+(n / 1_000_000).toFixed(1).replace(/\.0$/, '')}M imgs/$1`;
+                if (n >= 1_000)         return `${Math.round(n / 1_000)}K imgs/$1`;
                 return `${n} imgs/$1`;
             };
 

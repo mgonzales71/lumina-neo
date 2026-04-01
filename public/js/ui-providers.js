@@ -163,10 +163,11 @@ function renderCategoryConfig(providerId, categoryName, def, userConf, dynamicMo
             html += `<select class="config-field" data-provider="${providerId}" data-category="${categoryName}" data-key="selectedModel">`;
             modelsToRender.forEach(m => {
                 let label = m.label;
-                if (m.tier === 'free'   || m.price === 'FREE') label += ' ✦ FREE';
-                else if (m.tier === 'budget')                   label += ` ◆ ${m.price}`;
-                else if (m.price)                               label += ` · ${m.price}`;
-                else if (m.paid)                                label += ' 💰';
+                if (m.price === 'Pollen')    label += ' · Pollen';
+                else if (m.tier === 'free')  label += ' ✦ Free Preview';
+                else if (m.tier === 'budget') label += ` ◆ ${m.price}`;
+                else if (m.price)            label += ` · ${m.price}`;
+                else if (m.paid)             label += ' 💰';
                 html += `<option value="${m.id}" ${userConf.selectedModel === m.id ? 'selected' : ''}>${label}</option>`;
             });
             html += `</select>`;
