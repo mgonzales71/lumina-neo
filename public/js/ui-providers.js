@@ -49,10 +49,11 @@ export async function renderProviders() {
         const supportsDynamic = ['pollinations', 'openrouter'].includes(def.id);
         if (userConf.enabled && userConf.apiKey && supportsDynamic && !providerData[def.id]) {
             try {
+                const uidParam = `&userId=${encodeURIComponent(AppState.userId)}&profileId=${encodeURIComponent(profile.id)}`;
                 const [account, imageModels, textModels] = await Promise.all([
                     fetchApi(`/providers/account?userId=${AppState.userId}&profileId=${profile.id}&providerId=${def.id}`),
-                    fetchApi(`/providers/models?providerId=${def.id}&category=image`),
-                    fetchApi(`/providers/models?providerId=${def.id}&category=text`)
+                    fetchApi(`/providers/models?providerId=${def.id}&category=image${uidParam}`),
+                    fetchApi(`/providers/models?providerId=${def.id}&category=text${uidParam}`)
                 ]);
                 providerData[def.id] = { account, imageModels, textModels };
             } catch (err) {
@@ -155,9 +156,10 @@ function renderCategoryConfig(providerId, categoryName, def, userConf, dynamicMo
             html += `<select class="config-field" data-provider="${providerId}" data-category="${categoryName}" data-key="selectedModel">`;
             modelsToRender.forEach(m => {
                 let label = m.label;
-                if (m.price === 'FREE') label += ' ✦ FREE';
-                else if (m.price)       label += ` · ${m.price}`;
-                else if (m.paid)        label += ' 💰';
+                if (m.tier === 'free'   || m.price === 'FREE') label += ' ✦ FREE';
+                else if (m.tier === 'budget')                   label += ` ◆ ${m.price}`;
+                else if (m.price)                               label += ` · ${m.price}`;
+                else if (m.paid)                                label += ' 💰';
                 html += `<option value="${m.id}" ${userConf.selectedModel === m.id ? 'selected' : ''}>${label}</option>`;
             });
             html += `</select>`;

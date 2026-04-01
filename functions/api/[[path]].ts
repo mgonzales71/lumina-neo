@@ -814,7 +814,9 @@ async function handleGetProviderAccount(request: Request, env: Env): Promise<Res
 async function handleGetProviderModels(request: Request, env: Env): Promise<Response> {
     const url = new URL(request.url);
     const providerId = url.searchParams.get('providerId');
-    const category = url.searchParams.get('category') || 'image'; // image or text
+    const category   = url.searchParams.get('category') || 'image'; // image or text
+    const userId     = url.searchParams.get('userId');
+    const profileId  = url.searchParams.get('profileId');
 
     if (providerId === 'pollinations') {
         try {
@@ -848,44 +850,68 @@ async function handleGetProviderModels(request: Request, env: Env): Promise<Resp
 
     if (providerId === 'openrouter') {
         try {
-            // Public endpoint — no auth needed to list models
-            const res = await fetch('https://openrouter.ai/api/v1/models');
+            // Resolve API key if caller provided userId+profileId — lets OpenRouter
+            // return the full model catalog available to a funded account
+            const fetchHeaders: Record<string, string> = {};
+            if (userId && profileId) {
+                const prof = await env.KV_PROFILES.get<ProfileSettings>(`PROF:${userId}:${profileId}`, 'json');
+                const apiKey = prof?.providerSettings?.providers?.openrouter?.apiKey;
+                if (apiKey) fetchHeaders['Authorization'] = `Bearer ${apiKey}`;
+            }
+
+            const res  = await fetch('https://openrouter.ai/api/v1/models', { headers: fetchHeaders });
             const data = await res.json() as any;
             const raw: any[] = Array.isArray(data.data) ? data.data : [];
+
+            // Tier thresholds for image generation
+            const BUDGET_MAX_IMG = 0.01;  // < $0.01/img → budget tier
+            const BUDGET_MAX_TOK = 1.0;   // < $1/M tokens → budget tier
+
+            const fmtN = (n: number) => n >= 1 ? `$${+n.toPrecision(3)}` : `$${+n.toPrecision(2)}`;
 
             const models = raw
                 .filter((m: any) => {
                     const modality: string = m.architecture?.modality || '';
-                    if (category === 'image') {
-                        // text->image or text+image->image
-                        return modality.endsWith('->image') || modality.includes('->image');
-                    } else {
-                        return modality.endsWith('->text') || modality.includes('->text');
-                    }
+                    return category === 'image'
+                        ? modality.includes('->image')
+                        : modality.includes('->text');
                 })
                 .map((m: any) => {
-                    const isFree = m.id?.endsWith(':free') || m.pricing?.image === '0' || m.pricing?.completion === '0';
+                    const isFreeId = m.id?.endsWith(':free');
 
-                    let price = 'FREE';
-                    if (!isFree) {
-                        if (category === 'image') {
-                            const imgCost = parseFloat(m.pricing?.image || '0');
-                            price = imgCost > 0 ? `$${+imgCost.toPrecision(3)}/img` : 'FREE';
+                    let tier: 'free' | 'budget' | 'paid';
+                    let price: string;
+                    let sortPrice = 0;
+
+                    if (category === 'image') {
+                        const imgCost = parseFloat(m.pricing?.image || '0');
+                        if (isFreeId || imgCost === 0) {
+                            tier = 'free';  price = 'FREE';  sortPrice = 0;
+                        } else if (imgCost < BUDGET_MAX_IMG) {
+                            tier = 'budget'; price = `${fmtN(imgCost)}/img`; sortPrice = imgCost;
                         } else {
-                            const inCost  = parseFloat(m.pricing?.prompt     || '0') * 1_000_000;
-                            const outCost = parseFloat(m.pricing?.completion || '0') * 1_000_000;
-                            const fmtN = (n: number) => n >= 1 ? `$${+n.toPrecision(3)}` : `$${+n.toPrecision(2)}`;
-                            price = `${fmtN(inCost)}/${fmtN(outCost)} /M`;
+                            tier = 'paid';   price = `${fmtN(imgCost)}/img`; sortPrice = imgCost;
+                        }
+                    } else {
+                        const inCost  = parseFloat(m.pricing?.prompt     || '0') * 1_000_000;
+                        const outCost = parseFloat(m.pricing?.completion || '0') * 1_000_000;
+                        if (isFreeId || (inCost === 0 && outCost === 0)) {
+                            tier = 'free';   price = 'FREE'; sortPrice = 0;
+                        } else if (inCost < BUDGET_MAX_TOK && outCost < BUDGET_MAX_TOK) {
+                            tier = 'budget'; price = `${fmtN(inCost)}/${fmtN(outCost)} /M`; sortPrice = inCost;
+                        } else {
+                            tier = 'paid';   price = `${fmtN(inCost)}/${fmtN(outCost)} /M`; sortPrice = inCost;
                         }
                     }
 
-                    return { id: m.id, label: m.name || m.id, paid: !isFree, price };
+                    return { id: m.id, label: m.name || m.id, paid: tier === 'paid', tier, price, sortPrice };
                 })
                 .sort((a: any, b: any) => {
-                    // FREE models first, then cheapest paid first
-                    if (!a.paid && b.paid) return -1;
-                    if (a.paid && !b.paid) return 1;
-                    return a.label.localeCompare(b.label);
+                    // free → budget (cheapest first) → paid (cheapest first)
+                    const tierOrder: Record<string, number> = { free: 0, budget: 1, paid: 2 };
+                    const tDiff = tierOrder[a.tier] - tierOrder[b.tier];
+                    if (tDiff !== 0) return tDiff;
+                    return a.sortPrice - b.sortPrice || a.label.localeCompare(b.label);
                 });
 
             return jsonResponse({ ok: true, data: models });
