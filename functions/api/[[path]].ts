@@ -193,7 +193,10 @@ export const onRequest: PagesFunction<Env> = async (context) => {
       return await handleGenerateImage(request, env);
     }
     if (url.pathname === '/api/shortcuts/generate' && method === 'POST') {
-      return await handleShortcutsGenerate(request, env);
+      return await handleShortcutsGenerate(request, env, context);
+    }
+    if (url.pathname === '/api/shortcuts/job-status' && method === 'GET') {
+      return await handleShortcutsJobStatus(request, env);
     }
 
     return errorResponse('NOT_FOUND', 'Endpoint not found', { path: url.pathname }, 404);
@@ -683,9 +686,13 @@ async function handleGenerateImage(request: Request, env: Env): Promise<Response
     }
 }
 
-async function handleShortcutsGenerate(request: Request, env: Env): Promise<Response> {
+async function handleShortcutsGenerate(
+    request: Request,
+    env: Env,
+    ctx: { waitUntil: (p: Promise<any>) => void }
+): Promise<Response> {
     const body = await request.json() as any;
-    const { userId, passkey, profileId, lat, lon, deviceWidth, deviceHeight } = body;
+    const { userId, passkey, profileId, lat, lon, deviceWidth, deviceHeight, async: isAsync } = body;
 
     try {
         await authenticateUser(env, userId, passkey);
@@ -693,18 +700,46 @@ async function handleShortcutsGenerate(request: Request, env: Env): Promise<Resp
         return errorResponse('AUTH_FAILED', 'Invalid credentials', {}, 401);
     }
 
-    try {
-        const deviceSize = (deviceWidth && deviceHeight)
-            ? { width: Number(deviceWidth), height: Number(deviceHeight) }
-            : undefined;
+    const deviceSize = (deviceWidth && deviceHeight)
+        ? { width: Number(deviceWidth), height: Number(deviceHeight) }
+        : undefined;
 
-        const result = await generateImagePipeline(env, {
-            userId,
-            profileId,
-            lat,
-            lon,
-            deviceSize
-        });
+    // Async mode: return a jobId immediately so iOS Shortcuts doesn't time out.
+    // The pipeline runs in the background via waitUntil(); the shortcut polls
+    // /api/shortcuts/job-status?jobId=... every 5 s until status is "complete".
+    if (isAsync) {
+        const jobId = crypto.randomUUID();
+        const jobKey = `JOB:${jobId}`;
+        await env.KV_PROFILES.put(jobKey, JSON.stringify({ status: 'pending', createdAt: Date.now() }), { expirationTtl: 3600 });
+
+        ctx.waitUntil((async () => {
+            try {
+                const result = await generateImagePipeline(env, { userId, profileId, lat, lon, deviceSize });
+                const data = {
+                    imageUrl: result.imageUrl,
+                    weatherFallback: result.meta.weatherFallback,
+                    poi: { name: result.poi.name, description: result.poi.description },
+                    meta: {
+                        city: result.meta.city,
+                        state_region: result.meta.state,
+                        country: result.meta.country,
+                        theme: result.meta.theme,
+                        weather: result.meta.weather,
+                        temperature: `${result.meta.temp}°F`
+                    }
+                };
+                await env.KV_PROFILES.put(jobKey, JSON.stringify({ status: 'complete', result: data }), { expirationTtl: 3600 });
+            } catch (err: any) {
+                await env.KV_PROFILES.put(jobKey, JSON.stringify({ status: 'failed', error: err.message }), { expirationTtl: 3600 });
+            }
+        })());
+
+        return jsonResponse({ ok: true, data: { jobId, status: 'pending' } });
+    }
+
+    // Sync mode (existing behaviour — web app, Mac)
+    try {
+        const result = await generateImagePipeline(env, { userId, profileId, lat, lon, deviceSize });
 
         return jsonResponse({
             ok: true,
@@ -728,6 +763,27 @@ async function handleShortcutsGenerate(request: Request, env: Env): Promise<Resp
     } catch (err: any) {
         return errorResponse('GENERATION_FAILED', err.message);
     }
+}
+
+async function handleShortcutsJobStatus(request: Request, env: Env): Promise<Response> {
+    const url = new URL(request.url);
+    const jobId  = url.searchParams.get('jobId');
+    const userId = url.searchParams.get('userId');
+    const passkey = url.searchParams.get('passkey');
+
+    if (!jobId)  return errorResponse('INVALID_INPUT', 'Missing jobId');
+    if (!userId) return errorResponse('INVALID_INPUT', 'Missing userId');
+
+    try {
+        await authenticateUser(env, userId, passkey || '');
+    } catch {
+        return errorResponse('AUTH_FAILED', 'Invalid credentials', {}, 401);
+    }
+
+    const job = await env.KV_PROFILES.get<any>(`JOB:${jobId}`, 'json');
+    if (!job) return errorResponse('NOT_FOUND', 'Job not found or expired', {}, 404);
+
+    return jsonResponse({ ok: true, data: job });
 }
 
 async function handleGetProviderAccount(request: Request, env: Env): Promise<Response> {
