@@ -275,10 +275,34 @@ export async function generateImagePipeline(env: Env, params: PipelineParams): P
         // OpenRouter image generation via chat completions with modalities: ["image"]
         // Available image models: gemini-2.5-flash-image, gemini-3.x-*-image-preview,
         // gpt-5-image, gpt-5-image-mini. Response is base64 data URL in images[0].
+
+        // Snap width:height to the nearest clean aspect ratio that OpenRouter accepts.
+        // Phone pixel dimensions (e.g. 1327×2884) have large GCDs that produce ugly
+        // ratios — map to the closest standard portrait/landscape/square ratio instead.
+        const snapAspectRatio = (w: number, h: number): string => {
+            const ratio = w / h;
+            const candidates: [number, number][] = [
+                [1,1],[4,3],[3,4],[16,9],[9,16],[3,2],[2,3],[5,4],[4,5],
+                [9,19],[19,9],[9,20],[20,9],[9,21],[21,9],[2,1],[1,2]
+            ];
+            let best = candidates[0];
+            let bestDiff = Infinity;
+            for (const [cw, ch] of candidates) {
+                const diff = Math.abs(cw / ch - ratio);
+                if (diff < bestDiff) { bestDiff = diff; best = [cw, ch]; }
+            }
+            return `${best[0]}:${best[1]}`;
+        };
+        const imageSize = Math.max(width, height) >= 2048 ? '4K' : '2K';
+
         const orBody: Record<string, any> = {
             model: orModel,
             messages: [{ role: 'user', content: finalPrompt }],
             modalities: ['image'],
+            image_config: {
+                aspect_ratio: snapAspectRatio(width, height),
+                image_size: imageSize
+            },
             stream: false
         };
 
