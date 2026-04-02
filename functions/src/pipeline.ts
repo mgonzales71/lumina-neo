@@ -272,36 +272,26 @@ export async function generateImagePipeline(env: Env, params: PipelineParams): P
         const orModel = model || 'black-forest-labs/flux-schnell';
         const defaults = providerSettings.image?.defaults || {};
 
-        // OpenRouter images endpoint (OpenAI-compatible): POST /api/v1/images/generations
-        // FLUX, DALL-E, and Stable Diffusion models use this format; returns data[0].url
+        // OpenRouter image generation via chat completions with modalities: ["image"]
+        // Available image models: gemini-2.5-flash-image, gemini-3.x-*-image-preview,
+        // gpt-5-image, gpt-5-image-mini. Response is base64 data URL in images[0].
         const orBody: Record<string, any> = {
             model: orModel,
-            prompt: finalPrompt,
-            n: 1,
-            size: `${width}x${height}`
+            messages: [{ role: 'user', content: finalPrompt }],
+            modalities: ['image'],
+            stream: false
         };
-
-        // Optional params — models that don't support a field will ignore it
-        if (defaults.prompt_upsampling === true || defaults.prompt_upsampling === 'true') {
-            orBody.prompt_upsampling = true;
-        }
 
         // Seed: use the user's fixed seed if set, otherwise fall back to the random seed
         const userSeed = (defaults.seed !== undefined && defaults.seed !== '')
             ? parseInt(String(defaults.seed), 10) : NaN;
-        orBody.seed = isNaN(userSeed) ? seed : userSeed;
+        if (!isNaN(userSeed)) orBody.seed = isNaN(userSeed) ? seed : userSeed;
 
-        if (defaults.steps && parseInt(String(defaults.steps), 10) > 0) {
-            orBody.steps = parseInt(String(defaults.steps), 10);
-        }
-        if (defaults.guidance_scale && parseFloat(String(defaults.guidance_scale)) > 0) {
-            orBody.guidance_scale = parseFloat(String(defaults.guidance_scale));
-        }
         if (defaults.negative_prompt && String(defaults.negative_prompt).trim()) {
             orBody.negative_prompt = String(defaults.negative_prompt).trim();
         }
 
-        const orResponse = await fetch('https://openrouter.ai/api/v1/images/generations', {
+        const orResponse = await fetch('https://openrouter.ai/api/v1/chat/completions', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -318,8 +308,8 @@ export async function generateImagePipeline(env: Env, params: PipelineParams): P
         }
 
         const orResult = await orResponse.json() as any;
-        imageUrl = orResult.data?.[0]?.url || '';
-        if (!imageUrl) throw new Error('OpenRouter returned no image URL in response');
+        imageUrl = orResult.choices?.[0]?.message?.images?.[0]?.image_url?.url || '';
+        if (!imageUrl) throw new Error('OpenRouter returned no image in response');
     } else {
         imageUrl = 'https://via.placeholder.com/1024x1024?text=Other+Provider';
     }

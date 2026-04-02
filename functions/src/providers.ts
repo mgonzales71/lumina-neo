@@ -63,24 +63,20 @@ export const PROVIDER_REGISTRY: ProviderRegistry = {
         modelsUrl: 'https://openrouter.ai/api/v1/models',
         generate: {
           method: 'POST',
-          url: 'https://openrouter.ai/api/v1/images/generations',
+          url: 'https://openrouter.ai/api/v1/chat/completions',
           contentType: 'application/json',
           promptLocation: 'body'
         },
         fields: [
           { key: 'model', type: 'select', source: 'models', options: [
-            'black-forest-labs/flux-schnell',
-            'black-forest-labs/flux-1.1-pro',
-            'black-forest-labs/flux-1.1-pro-ultra',
-            'openai/dall-e-3',
-            'openai/dall-e-2',
-            'stability-ai/stable-diffusion-xl-base-1.0'
+            'google/gemini-2.5-flash-image',
+            'google/gemini-3.1-flash-image-preview',
+            'google/gemini-3-pro-image-preview',
+            'openai/gpt-5-image-mini',
+            'openai/gpt-5-image'
           ], optional: false },
-          { key: 'prompt_upsampling', type: 'boolean',  optional: true },
-          { key: 'seed',             type: 'number',   optional: true },
-          { key: 'steps',            type: 'number',   optional: true },
-          { key: 'guidance_scale',   type: 'number',   optional: true },
-          { key: 'negative_prompt',  type: 'text',     optional: true }
+          { key: 'seed',            type: 'number', optional: true },
+          { key: 'negative_prompt', type: 'text',   optional: true }
         ]
       },
       text: {
