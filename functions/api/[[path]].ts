@@ -899,15 +899,35 @@ async function handleGetProviderModels(request: Request, env: Env): Promise<Resp
                     let sortPrice = 0;
 
                     if (category === 'image') {
-                        // Some models put per-image cost in pricing.request instead of pricing.image
-                        const imgCost = parseFloat(m.pricing?.image   || '0')
-                                      + parseFloat(m.pricing?.request || '0');
+                        // Strategy 1: dedicated image or request flat-fee fields
+                        let imgCost = parseFloat(m.pricing?.image   || '0')
+                                    + parseFloat(m.pricing?.request || '0');
+
+                        // Strategy 2: token-based models (Gemini, GPT-5 Image) store cost in
+                        // prompt/completion fields. Estimate: ~100 input + ~1000 output tokens/image.
+                        let isEstimate = false;
+                        if (imgCost === 0) {
+                            const inCost  = parseFloat(m.pricing?.prompt     || '0');
+                            const outCost = parseFloat(m.pricing?.completion || '0');
+                            if (inCost > 0 || outCost > 0) {
+                                imgCost    = (100 * inCost) + (1000 * outCost);
+                                isEstimate = true;
+                            }
+                        }
+
+                        // Strategy 3: flat-rate/per-MP models (FLUX, Riverflow, Seedream) report
+                        // zero in all pricing fields — extract the first $ amount from description.
+                        if (imgCost === 0 && !isFreeId && m.description) {
+                            const match = m.description.match(/\$([0-9]*\.?[0-9]+)/);
+                            if (match) imgCost = parseFloat(match[1]);
+                        }
+
                         if (isFreeId || imgCost === 0) {
-                            tier = 'free';   price = 'FREE';                          sortPrice = 0;
+                            tier = 'free';   price = 'FREE';                                           sortPrice = 0;
                         } else if (imgCost < BUDGET_MAX_IMG) {
-                            tier = 'budget'; price = fmtImgPerDollar(imgCost);        sortPrice = imgCost;
+                            tier = 'budget'; price = (isEstimate ? '~' : '') + fmtImgPerDollar(imgCost); sortPrice = imgCost;
                         } else {
-                            tier = 'paid';   price = fmtImgPerDollar(imgCost);        sortPrice = imgCost;
+                            tier = 'paid';   price = (isEstimate ? '~' : '') + fmtImgPerDollar(imgCost); sortPrice = imgCost;
                         }
                     } else {
                         const inCost  = parseFloat(m.pricing?.prompt     || '0') * 1_000_000;
