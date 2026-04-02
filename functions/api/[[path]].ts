@@ -869,6 +869,12 @@ async function handleGetProviderModels(request: Request, env: Env): Promise<Resp
             const data = await res.json() as any;
             const raw: any[] = Array.isArray(data.data) ? data.data : [];
 
+            // openrouter/auto is a meta-routing model — no deterministic pricing, not useful
+            // as a specific image model choice, so exclude it from the image catalog.
+            const filtered = category === 'image'
+                ? raw.filter((m: any) => m.id !== 'openrouter/auto')
+                : raw;
+
             const BUDGET_MAX_IMG = 0.01; // < $0.01/img → budget tier (> 100 imgs/$1)
             const BUDGET_MAX_TOK = 1.0;  // < $1/M tokens → budget tier
 
@@ -891,7 +897,7 @@ async function handleGetProviderModels(request: Request, env: Env): Promise<Resp
                 return `$${n.toFixed(6)}`;
             };
 
-            const models = raw
+            const models = filtered
                 .map((m: any) => {
                     const isFreeId = m.id?.endsWith(':free');
                     let tier: 'free' | 'budget' | 'paid';
@@ -899,11 +905,19 @@ async function handleGetProviderModels(request: Request, env: Env): Promise<Resp
                     let sortPrice = 0;
 
                     if (category === 'image') {
-                        // Strategy 1: dedicated image or request flat-fee fields
-                        let imgCost = parseFloat(m.pricing?.image   || '0')
-                                    + parseFloat(m.pricing?.request || '0');
+                        // Strategy 1: per-image flat fee (pricing.image / pricing.request).
+                        // Must be >= $0.0001/image to be treated as a genuine per-image price.
+                        // Values below that threshold are per-token image costs (Gemini's format)
+                        // and would inflate the count to millions — fall through to strategy 2.
+                        const PER_IMAGE_MIN = 0.0001;
+                        const imageDirect   = parseFloat(m.pricing?.image   || '0');
+                        const requestFlat   = parseFloat(m.pricing?.request || '0');
+                        let imgCost = 0;
+                        if (imageDirect >= PER_IMAGE_MIN || requestFlat >= PER_IMAGE_MIN) {
+                            imgCost = imageDirect + requestFlat;
+                        }
 
-                        // Strategy 2: token-based models (Gemini, GPT-5 Image) store cost in
+                        // Strategy 2: token-based models (Gemini, GPT-5 Image) — cost lives in
                         // prompt/completion fields. Estimate: ~100 input + ~1000 output tokens/image.
                         let isEstimate = false;
                         if (imgCost === 0) {
@@ -916,9 +930,11 @@ async function handleGetProviderModels(request: Request, env: Env): Promise<Resp
                         }
 
                         // Strategy 3: flat-rate/per-MP models (FLUX, Riverflow, Seedream) report
-                        // zero in all pricing fields — extract the first $ amount from description.
+                        // zero in all pricing fields — find the base per-image/per-MP price in
+                        // the description. Look for a $ amount followed by a per-unit indicator
+                        // to avoid picking up reference prices buried later in the text.
                         if (imgCost === 0 && !isFreeId && m.description) {
-                            const match = m.description.match(/\$([0-9]*\.?[0-9]+)/);
+                            const match = m.description.match(/\$([0-9]*\.?[0-9]+)\s*(?:\/\s*(?:image|img|MP|1MP|1K|megapixel))?/i);
                             if (match) imgCost = parseFloat(match[1]);
                         }
 
