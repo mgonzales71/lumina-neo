@@ -23,6 +23,7 @@ export async function renderHome() {
     const lastGen   = AppState.lastGenerated;
     const ONE_HOUR  = 60 * 60 * 1000;
     const isStale   = lastGen?.debug?.provider === 'openrouter'
+                      && !lastGen?.imageUrl?.startsWith('data:')
                       && (Date.now() - (lastGen.generatedAt || 0)) > ONE_HOUR;
     const lastImg   = isStale ? null : lastGen?.imageUrl;
     const lastDebug = lastGen?.debug;
@@ -221,7 +222,10 @@ async function doGenerate(lat, lon, btn, btnLabel, overlay, imgContainer, debugC
         toggleDebugBtn.disabled    = false;
 
         AppState.lastGenerated = { ...response, generatedAt: Date.now() };
-        AppState.save();
+        // Don't persist base64 data URLs to localStorage — they're too large (~2-4 MB)
+        if (!response.imageUrl?.startsWith('data:')) {
+            AppState.save();
+        }
 
         // Wait for the image bytes to arrive before dismissing the overlay
         await imageLoaded;

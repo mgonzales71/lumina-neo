@@ -272,6 +272,8 @@ export async function generateImagePipeline(env: Env, params: PipelineParams): P
         const orModel = model || 'black-forest-labs/flux-schnell';
         const defaults = providerSettings.image?.defaults || {};
 
+        // OpenRouter images endpoint (OpenAI-compatible): POST /api/v1/images/generations
+        // FLUX, DALL-E, and Stable Diffusion models use this format; returns data[0].url
         const orBody: Record<string, any> = {
             model: orModel,
             prompt: finalPrompt,
@@ -283,6 +285,7 @@ export async function generateImagePipeline(env: Env, params: PipelineParams): P
         if (defaults.prompt_upsampling === true || defaults.prompt_upsampling === 'true') {
             orBody.prompt_upsampling = true;
         }
+
         // Seed: use the user's fixed seed if set, otherwise fall back to the random seed
         const userSeed = (defaults.seed !== undefined && defaults.seed !== '')
             ? parseInt(String(defaults.seed), 10) : NaN;
