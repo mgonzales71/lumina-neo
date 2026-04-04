@@ -16,21 +16,44 @@ export function renderPrompt(template: string, vars: Record<string, any>): strin
  * Nominatim Reverse Geocoding
  */
 export async function reverseGeocode(lat: number, lon: number) {
+  const headers = { 'User-Agent': 'Lumina-Neo/1.2.2 (Cloudflare Pages Functions)' };
   try {
     const url = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=10&addressdetails=1`;
-    const response = await fetch(url, {
-      headers: {
-        'User-Agent': 'Lumina-Neo/1.1.0 (Cloudflare Pages Functions)'
-      }
-    });
-    const data = await response.json() as any;
-    
+    const data = await fetch(url, { headers }).then(r => r.json()) as any;
     const addr = data.address || {};
+
+    // Priority: named place → administrative area → county → region
+    const city =
+      addr.city ||
+      addr.town ||
+      addr.village ||
+      addr.suburb ||
+      addr.hamlet ||
+      addr.municipality ||
+      addr.city_district ||
+      addr.district ||
+      addr.quarter ||
+      addr.neighbourhood ||
+      addr.county;
+
+    if (city) {
+      return {
+        city,
+        state: addr.state || addr.province || addr.region || '',
+        country: addr.country || 'Unknown Country'
+      };
+    }
+
+    // Zoom out to county level for remote/rural areas
+    const fallbackUrl = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=8&addressdetails=1`;
+    const fallback = await fetch(fallbackUrl, { headers }).then(r => r.json()) as any;
+    const faddr = fallback.address || {};
     return {
-      city: addr.city || addr.town || addr.village || addr.suburb || 'Unknown City',
-      state: addr.state || addr.province || '',
-      country: addr.country || 'Unknown Country'
+      city: faddr.county || faddr.state_district || faddr.region || faddr.state || 'Unknown Area',
+      state: faddr.state || faddr.province || '',
+      country: faddr.country || 'Unknown Country'
     };
+
   } catch (err) {
     console.error('Nominatim failed:', err);
     return { city: 'Unknown', state: '', country: '' };
