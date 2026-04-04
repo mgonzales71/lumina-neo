@@ -207,7 +207,7 @@ export function renderLocations() {
     function showVerified(verifiedText, resultDiv, addBtn, loc) {
         verifiedText.innerHTML = `
             <strong>Cleaned:</strong> ${loc.city}${loc.state ? ', ' + loc.state : ''}, ${loc.country}<br>
-            <span style="font-size: 0.8rem; opacity: 0.8;">Coords: ${loc.lat.toFixed(4)}, ${loc.lon.toFixed(4)}</span>
+            <span style="font-size: 0.8rem; opacity: 0.8;">Coords: ${parseFloat(loc.lat).toFixed(4)}, ${parseFloat(loc.lon).toFixed(4)}</span>
         `;
         resultDiv.style.borderColor = 'var(--success-color)';
         resultDiv.style.display = 'block';
