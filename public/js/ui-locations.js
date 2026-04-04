@@ -48,7 +48,7 @@ export function renderLocations() {
                         <div>
                             <div style="font-size: 1.1rem; font-weight: 600;">${loc.city}${loc.id === profile.activeLocationId && !isGPS ? ' <span style="font-size:0.8em; color:var(--primary);">✓ Active</span>' : ''}</div>
                             <div style="font-size: 0.9rem; color: var(--text-secondary);">${loc.state ? loc.state + ', ' : ''}${loc.country}</div>
-                            <div style="font-size: 0.75rem; color: var(--primary); font-family: monospace; margin-top: 4px;">${loc.lat.toFixed(4)}, ${loc.lon.toFixed(4)}</div>
+                            <div style="font-size: 0.75rem; color: var(--primary); font-family: monospace; margin-top: 4px;">${parseFloat(loc.lat).toFixed(4)}, ${parseFloat(loc.lon).toFixed(4)}</div>
                             <div id="poi-count-${loc.id}" style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 3px;">POIs: —</div>
                         </div>
                         <button class="btn btn-danger btn-sm delete-loc-btn" data-index="${index}" title="Delete" style="padding:8px 10px; font-size:0.95rem; line-height:1;">&times;</button>
