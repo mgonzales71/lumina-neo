@@ -58,7 +58,7 @@ export async function generateImagePipeline(env: Env, params: PipelineParams): P
     if (!profile.locations) profile.locations = [];
     const locationKnown = profile.locations.some(l => l.id === locationId);
     if (!locationKnown) {
-        profile.locations.push({ id: locationId, lat, lon, city: geo.city, state: geo.state, country: geo.country });
+        profile.locations.push({ id: locationId, lat: Number(lat), lon: Number(lon), city: geo.city, state: geo.state, country: geo.country });
         await env.KV_PROFILES.put(profileKey, JSON.stringify(profile));
     }
 
