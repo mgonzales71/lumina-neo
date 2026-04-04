@@ -2,7 +2,7 @@ import { ThemeEntry } from './types';
 
 /**
  * Lumina Neo Utilities
- * Version: v1.2.1
+ * Version: v1.2.2
  */
 
 export function renderPrompt(template: string, vars: Record<string, any>): string {
